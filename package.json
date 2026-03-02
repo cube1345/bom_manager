@@ -1,12 +1,15 @@
 {
   "name": "bom_manager",
   "version": "0.1.0",
+  "main": "electron/main.cjs",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:dev": "concurrently \"pnpm dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
+    "electron:dist": "pnpm build && electron-builder --win --x64"
   },
   "dependencies": {
     "next": "16.1.6",
@@ -18,9 +21,31 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.bom.manager",
+    "productName": "BOMManager",
+    "asar": false,
+    "files": [
+      "electron/**/*",
+      ".next/standalone/**/*",
+      ".next/static/**/*",
+      "public/**/*",
+      "data/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
   }
 }

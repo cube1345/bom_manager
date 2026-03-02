@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 电子元器件智能管理系统
 
-## Getting Started
+基于 Next.js + 本地 JSON 数据库实现，支持：
 
-First, run the development server:
+- 类型管理（CRUD）
+- 元器件管理（CRUD）
+- 采购记录管理（CRUD）
+- 关键词搜索 + 多条件筛选
+- 批量导入（JSON / CSV）
+- 库存预警（阈值可配置）
+- 导出 JSON / Excel（`.xls`）
+- 打包 Windows 可执行文件（Electron）
+
+## 1. 路由结构
+
+- `/`：系统首页
+- `/types`：类型管理
+- `/components`：元器件列表（搜索、筛选、预警）
+- `/components/manage`：元器件管理（含采购记录和批量导入）
+
+## 2. 运行开发环境
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 `http://localhost:3000`。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+本地数据库文件路径：`data/bom-data.json`。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 3. 元器件字段
 
-## Learn More
+- 类型（单选，类型本身可 CRUD）
+- 型号
+- 辅助信息
+- 备注
+- 库存预警阈值
+- 记录（采购平台、购买链接、数目、价格（元/个）、购买时间）
+- 总数目（自动计算）
+- 最低价格（自动记录）
+- 创建时间
+- 更新时间
 
-To learn more about Next.js, take a look at the following resources:
+说明：采购记录中的购买时间由提交记录时自动生成。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 4. 批量导入
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+支持 `.json` 和 `.csv`。
 
-## Deploy on Vercel
+### CSV 头部示例
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```csv
+typeName,model,auxInfo,note,warningThreshold,platform,link,quantity,pricePerUnit
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+规则：
+- 同 `typeName + model` 会合并为同一个元器件。
+- 已存在的同型号元器件将被更新，并追加采购记录。
+- 不存在的类型会自动创建。
+
+## 5. 导出数据
+
+页面支持：
+
+- 导出 JSON
+- 导出 Excel（`.xls`，可用 Excel 直接打开）
+
+## 6. 打包 Windows 可执行文件
+
+```bash
+pnpm install
+pnpm build
+pnpm electron:dist
+```
+
+生成目录：`dist/`（包含 `.exe` 安装包）。
+
+## 7. Electron 本地调试
+
+```bash
+pnpm install
+pnpm electron:dev
+```
+
+该命令会同时启动 Next.js 与 Electron 窗口。

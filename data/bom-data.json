@@ -1,0 +1,23 @@
+{
+  "types": [
+    {
+      "id": "type-resistor",
+      "name": "电阻",
+      "createdAt": "2026-03-02T00:00:00.000Z",
+      "updatedAt": "2026-03-02T00:00:00.000Z"
+    },
+    {
+      "id": "type-capacitor",
+      "name": "电容",
+      "createdAt": "2026-03-02T00:00:00.000Z",
+      "updatedAt": "2026-03-02T00:00:00.000Z"
+    },
+    {
+      "id": "type-chip",
+      "name": "芯片",
+      "createdAt": "2026-03-02T00:00:00.000Z",
+      "updatedAt": "2026-03-02T00:00:00.000Z"
+    }
+  ],
+  "components": []
+}

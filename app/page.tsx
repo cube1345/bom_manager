@@ -1,65 +1,74 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { ComponentItem, ComponentType } from "@/lib/types";
+import { requestJson, triggerDownload } from "@/lib/http-client";
 
 export default function Home() {
+  const [types, setTypes] = useState<ComponentType[]>([]);
+  const [components, setComponents] = useState<ComponentItem[]>([]);
+
+  useEffect(() => {
+    void Promise.all([
+      requestJson<ComponentType[]>("/api/types"),
+      requestJson<ComponentItem[]>("/api/components"),
+    ]).then(([typesData, componentsData]) => {
+      setTypes(typesData);
+      setComponents(componentsData);
+    });
+  }, []);
+
+  const warningCount = components.filter(
+    (item) => item.warningThreshold > 0 && item.totalQuantity <= item.warningThreshold,
+  ).length;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <section className="hero-card">
+        <div>
+          <h1>电子元器件智能管理系统</h1>
+          <p>按路由分离页面，覆盖类型管理、列表查询、元器件管理与批量导入。</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="toolbar">
+          <button type="button" className="btn-secondary" onClick={() => triggerDownload("/api/export/json")}>
+            导出 JSON
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => triggerDownload("/api/export/excel")}>
+            导出 Excel
+          </button>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="grid-three">
+        <article className="panel stat-card">
+          <span>类型总数</span>
+          <strong>{types.length}</strong>
+        </article>
+        <article className="panel stat-card">
+          <span>元器件总数</span>
+          <strong>{components.length}</strong>
+        </article>
+        <article className="panel stat-card warning">
+          <span>库存预警</span>
+          <strong>{warningCount}</strong>
+        </article>
+      </section>
+
+      <section className="grid-three">
+        <Link href="/types" className="panel link-card">
+          <h3>类型管理</h3>
+          <p>维护可选类型，支持增删改查。</p>
+        </Link>
+        <Link href="/components" className="panel link-card">
+          <h3>元器件列表</h3>
+          <p>关键词搜索、筛选和库存预警视图。</p>
+        </Link>
+        <Link href="/components/manage" className="panel link-card">
+          <h3>元器件管理</h3>
+          <p>元器件/记录 CRUD + 批量导入。</p>
+        </Link>
+      </section>
+    </>
   );
 }
