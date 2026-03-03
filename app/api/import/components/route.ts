@@ -78,12 +78,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: `型号 ${model} 的预警阈值不合法` }, { status: 400 });
     }
 
-    let type = db.types.find((entry) => entry.name === typeName);
+    const primaryName = typeName.includes("/") ? typeName.split("/")[0]?.trim() ?? "" : typeName;
+    const secondaryName = typeName.includes("/") ? typeName.split("/")[1]?.trim() ?? "" : "";
+    const normalizedTypeName = secondaryName ? `${primaryName}/${secondaryName}` : primaryName;
+    let type = db.types.find(
+      (entry) =>
+        entry.primaryName.toLowerCase() === primaryName.toLowerCase() &&
+        (entry.secondaryName ?? "").toLowerCase() === secondaryName.toLowerCase(),
+    );
     if (!type) {
       const now = nowIso();
       type = {
         id: createId(),
-        name: typeName,
+        name: normalizedTypeName,
+        primaryName,
+        secondaryName,
         createdAt: now,
         updatedAt: now,
       };

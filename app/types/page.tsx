@@ -6,7 +6,8 @@ import { formatTime, requestJson } from "@/lib/http-client";
 
 export default function TypesPage() {
   const [types, setTypes] = useState<ComponentType[]>([]);
-  const [name, setName] = useState("");
+  const [primaryName, setPrimaryName] = useState("");
+  const [secondaryName, setSecondaryName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ export default function TypesPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) {
+    if (!primaryName.trim()) {
       return;
     }
 
@@ -38,16 +39,17 @@ export default function TypesPage() {
       if (editingId) {
         await requestJson(`/api/types/${editingId}`, {
           method: "PUT",
-          body: JSON.stringify({ name }),
+          body: JSON.stringify({ primaryName, secondaryName }),
         });
       } else {
         await requestJson("/api/types", {
           method: "POST",
-          body: JSON.stringify({ name }),
+          body: JSON.stringify({ primaryName, secondaryName }),
         });
       }
 
-      setName("");
+      setPrimaryName("");
+      setSecondaryName("");
       setEditingId(null);
       await loadTypes();
     } catch (err) {
@@ -85,10 +87,15 @@ export default function TypesPage() {
           <h2>{editingId ? "编辑类型" : "新增类型"}</h2>
           <form className="stack-form" onSubmit={onSubmit}>
             <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="例如：传感器"
+              value={primaryName}
+              onChange={(event) => setPrimaryName(event.target.value)}
+              placeholder="一级类型，例如：传感器"
               required
+            />
+            <input
+              value={secondaryName}
+              onChange={(event) => setSecondaryName(event.target.value)}
+              placeholder="二级类型（可选），例如：温湿度"
             />
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
@@ -100,7 +107,8 @@ export default function TypesPage() {
                   className="btn-ghost"
                   onClick={() => {
                     setEditingId(null);
-                    setName("");
+                    setPrimaryName("");
+                    setSecondaryName("");
                   }}
                 >
                   取消
@@ -118,6 +126,10 @@ export default function TypesPage() {
               <div className="type-item" key={item.id}>
                 <div>
                   <strong>{item.name}</strong>
+                  <p>
+                    一级：{item.primaryName}
+                    {item.secondaryName ? ` ｜ 二级：${item.secondaryName}` : " ｜ 二级：无"}
+                  </p>
                   <p>更新时间：{formatTime(item.updatedAt)}</p>
                 </div>
                 <div className="inline-actions">
@@ -126,7 +138,8 @@ export default function TypesPage() {
                     className="btn-ghost"
                     onClick={() => {
                       setEditingId(item.id);
-                      setName(item.name);
+                      setPrimaryName(item.primaryName);
+                      setSecondaryName(item.secondaryName ?? "");
                     }}
                   >
                     编辑

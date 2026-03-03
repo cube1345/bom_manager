@@ -5,11 +5,16 @@ export const runtime = "nodejs";
 
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const body = (await req.json()) as { name?: string };
-  const name = body.name?.trim();
+  const body = (await req.json()) as { name?: string; primaryName?: string; secondaryName?: string };
+  const fallbackName = body.name?.trim() ?? "";
+  const fallbackPrimary = fallbackName.includes("/") ? fallbackName.split("/")[0]?.trim() ?? "" : fallbackName;
+  const fallbackSecondary = fallbackName.includes("/") ? fallbackName.split("/")[1]?.trim() ?? "" : "";
+  const primaryName = body.primaryName?.trim() || fallbackPrimary;
+  const secondaryName = body.secondaryName?.trim() || fallbackSecondary;
+  const name = secondaryName ? `${primaryName}/${secondaryName}` : primaryName;
 
-  if (!name) {
-    return NextResponse.json({ message: "类型名称不能为空" }, { status: 400 });
+  if (!primaryName) {
+    return NextResponse.json({ message: "一级类型不能为空" }, { status: 400 });
   }
 
   const db = await readDb();
@@ -19,12 +24,19 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     return NextResponse.json({ message: "类型不存在" }, { status: 404 });
   }
 
-  const duplicate = db.types.some((item) => item.id !== id && item.name === name);
+  const duplicate = db.types.some(
+    (item) =>
+      item.id !== id &&
+      item.primaryName.toLowerCase() === primaryName.toLowerCase() &&
+      (item.secondaryName ?? "").toLowerCase() === secondaryName.toLowerCase(),
+  );
   if (duplicate) {
-    return NextResponse.json({ message: "类型名称已存在" }, { status: 400 });
+    return NextResponse.json({ message: "该类型组合已存在" }, { status: 400 });
   }
 
   type.name = name;
+  type.primaryName = primaryName;
+  type.secondaryName = secondaryName;
   type.updatedAt = nowIso();
   await writeDb(db);
 

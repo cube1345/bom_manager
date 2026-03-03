@@ -44,8 +44,8 @@ export function renderExcelHtml(db: BomDatabase) {
 
   const typesTable = renderTable(
     "类型",
-    ["id", "类型名称", "创建时间", "更新时间"],
-    db.types.map((item) => [item.id, item.name, item.createdAt, item.updatedAt]),
+    ["id", "一级类型", "二级类型", "显示名称", "创建时间", "更新时间"],
+    db.types.map((item) => [item.id, item.primaryName, item.secondaryName ?? "", item.name, item.createdAt, item.updatedAt]),
   );
 
   const componentsTable = renderTable(
@@ -132,6 +132,23 @@ export function renderExcelHtml(db: BomDatabase) {
     ),
   );
 
+  const storesTable = renderTable(
+    "店铺评价",
+    ["店铺 id", "平台", "店铺名", "质量评分", "价格评分", "邮费(元)", "主卖品", "备注", "创建时间", "更新时间"],
+    db.stores.map((item) => [
+      item.id,
+      item.platform,
+      item.shopName,
+      item.qualityScore,
+      item.priceScore,
+      item.shippingFee,
+      item.mainProducts,
+      item.note,
+      item.createdAt,
+      item.updatedAt,
+    ]),
+  );
+
   return `
     <html>
       <head>
@@ -151,6 +168,7 @@ export function renderExcelHtml(db: BomDatabase) {
         ${recordsTable}
         ${pcbTable}
         ${pcbItemsTable}
+        ${storesTable}
       </body>
     </html>
   `;

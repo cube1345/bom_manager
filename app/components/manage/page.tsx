@@ -278,7 +278,8 @@ function ManageComponentsPageInner() {
   const [activeComponent, setActiveComponent] = useState<ComponentItem | null>(null);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [recordModalOpen, setRecordModalOpen] = useState(false);
-  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypePrimaryName, setNewTypePrimaryName] = useState("");
+  const [newTypeSecondaryName, setNewTypeSecondaryName] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [appliedRouteKey, setAppliedRouteKey] = useState("");
   const [error, setError] = useState("");
@@ -394,8 +395,9 @@ function ManageComponentsPageInner() {
 
   async function createTypeInline(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const name = newTypeName.trim();
-    if (!name) {
+    const primaryName = newTypePrimaryName.trim();
+    const secondaryName = newTypeSecondaryName.trim();
+    if (!primaryName) {
       return;
     }
 
@@ -405,10 +407,11 @@ function ManageComponentsPageInner() {
     try {
       const created = await requestJson<ComponentType>("/api/types", {
         method: "POST",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ primaryName, secondaryName }),
       });
 
-      setNewTypeName("");
+      setNewTypePrimaryName("");
+      setNewTypeSecondaryName("");
       await loadData();
       setComponentForm((prev) => ({ ...prev, typeId: created.id }));
       setInfo(`类型 "${created.name}" 已创建并写入 JSON`);
@@ -681,10 +684,15 @@ function ManageComponentsPageInner() {
           <h3>快速新增类型</h3>
           <form className="inline-create-form" onSubmit={createTypeInline}>
             <input
-              value={newTypeName}
-              onChange={(event) => setNewTypeName(event.target.value)}
-              placeholder="输入新类型名称，例如：连接器"
+              value={newTypePrimaryName}
+              onChange={(event) => setNewTypePrimaryName(event.target.value)}
+              placeholder="一级类型，例如：连接器"
               required
+            />
+            <input
+              value={newTypeSecondaryName}
+              onChange={(event) => setNewTypeSecondaryName(event.target.value)}
+              placeholder="二级类型（可选）"
             />
             <button type="submit" className="btn-secondary">
               新增类型

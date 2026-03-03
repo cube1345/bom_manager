@@ -3,7 +3,7 @@ import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { serializeDbExcel, serializeDbJson } from "./exporters";
 import { getStorageDir } from "./storage-config";
-import type { BomDatabase, ComponentItem, PcbBomItem, PcbItem, ProjectItem, PurchaseRecord } from "./types";
+import type { BomDatabase, ComponentItem, ComponentType, PcbBomItem, PcbItem, ProjectItem, PurchaseRecord, StoreReview } from "./types";
 
 const DATA_FILE_NAME = "bom-data.json";
 const EXPORT_DIR_NAME = "exports";
@@ -17,18 +17,24 @@ const defaultDb: BomDatabase = {
     {
       id: randomUUID(),
       name: "电阻",
+      primaryName: "电阻",
+      secondaryName: "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
     {
       id: randomUUID(),
       name: "电容",
+      primaryName: "电容",
+      secondaryName: "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
     {
       id: randomUUID(),
       name: "芯片",
+      primaryName: "芯片",
+      secondaryName: "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -36,6 +42,7 @@ const defaultDb: BomDatabase = {
   components: [],
   projects: [],
   pcbs: [],
+  stores: [],
 };
 
 export function createId() {
@@ -134,6 +141,39 @@ export function normalizeProject(input: ProjectItem): ProjectItem {
   };
 }
 
+export function normalizeType(input: ComponentType): ComponentType {
+  const nameFallback = input.name?.trim() ?? "";
+  const derivedPrimary = nameFallback.includes("/") ? nameFallback.split("/")[0]?.trim() ?? "" : nameFallback;
+  const derivedSecondary = nameFallback.includes("/") ? nameFallback.split("/")[1]?.trim() ?? "" : "";
+  const primaryName = input.primaryName?.trim() || derivedPrimary;
+  const secondaryName = input.secondaryName?.trim() || derivedSecondary;
+  const name = secondaryName ? `${primaryName}/${secondaryName}` : primaryName;
+
+  return {
+    id: input.id,
+    name,
+    primaryName,
+    secondaryName,
+    createdAt: input.createdAt ?? nowIso(),
+    updatedAt: input.updatedAt ?? nowIso(),
+  };
+}
+
+export function normalizeStore(input: StoreReview): StoreReview {
+  return {
+    id: input.id,
+    platform: input.platform?.trim() ?? "",
+    shopName: input.shopName?.trim() ?? "",
+    qualityScore: Number(input.qualityScore ?? 0),
+    shippingFee: Number(input.shippingFee ?? 0),
+    priceScore: Number(input.priceScore ?? 0),
+    mainProducts: input.mainProducts?.trim() ?? "",
+    note: input.note?.trim() ?? "",
+    createdAt: input.createdAt ?? nowIso(),
+    updatedAt: input.updatedAt ?? nowIso(),
+  };
+}
+
 async function ensureDbFile() {
   const paths = await getDataPaths();
   await mkdir(paths.dataDir, { recursive: true });
@@ -224,6 +264,7 @@ function sliceFirstJsonRoot(raw: string): string {
 }
 
 function normalizeDb(parsed: BomDatabase): BomDatabase {
+  const normalizedTypes = (parsed.types ?? []).map((item) => normalizeType(item as ComponentType));
   const sourceProjects = (parsed.projects ?? []).map((item) => normalizeProject(item as ProjectItem));
   const projectByName = new Map(sourceProjects.map((item) => [item.name.toLowerCase(), item]));
 
@@ -258,7 +299,7 @@ function normalizeDb(parsed: BomDatabase): BomDatabase {
   });
 
   return {
-    types: parsed.types ?? [],
+    types: normalizedTypes,
     components: (parsed.components ?? []).map((item) =>
       normalizeComponent({
         ...item,
@@ -267,6 +308,7 @@ function normalizeDb(parsed: BomDatabase): BomDatabase {
     ),
     projects: sourceProjects,
     pcbs: normalizedPcbs,
+    stores: (parsed.stores ?? []).map((item) => normalizeStore(item as StoreReview)),
   };
 }
 
@@ -344,6 +386,7 @@ export async function readDb(): Promise<BomDatabase> {
 
   const schemaNeedsPersist =
     !Array.isArray((parsed as { projects?: unknown }).projects) ||
+    !Array.isArray((parsed as { stores?: unknown }).stores) ||
     ((parsed as { pcbs?: Array<{ projectId?: string }> }).pcbs ?? []).some((item) => !item.projectId);
 
   if (schemaNeedsPersist) {

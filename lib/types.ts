@@ -1,6 +1,8 @@
 export interface ComponentType {
   id: string;
   name: string;
+  primaryName: string;
+  secondaryName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,9 +60,23 @@ export interface PcbItem {
   updatedAt: string;
 }
 
+export interface StoreReview {
+  id: string;
+  platform: string;
+  shopName: string;
+  qualityScore: number;
+  shippingFee: number;
+  priceScore: number;
+  mainProducts: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BomDatabase {
   types: ComponentType[];
   components: ComponentItem[];
   projects: ProjectItem[];
   pcbs: PcbItem[];
+  stores: StoreReview[];
 }

@@ -121,6 +121,9 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
           <Link href="/settings" className="btn-secondary btn-link home-quick-action">
             存储设置
           </Link>
+          <Link href="/stores" className="btn-secondary btn-link home-quick-action">
+            店铺评价
+          </Link>
           <button type="button" className="btn-secondary" onClick={() => triggerDownload("/api/export/json")}>
             导出 JSON
           </button>
