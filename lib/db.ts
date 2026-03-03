@@ -87,6 +87,7 @@ export function normalizeComponent(input: ComponentItem): ComponentItem {
 
 export function normalizeRecord(input: {
   id: string;
+  storeId?: string;
   platform: string;
   link: string;
   quantity: number;
@@ -97,6 +98,7 @@ export function normalizeRecord(input: {
 }): PurchaseRecord {
   return {
     id: input.id,
+    storeId: input.storeId?.trim() || undefined,
     platform: input.platform.trim(),
     link: input.link.trim(),
     quantity: Number(input.quantity),
@@ -167,6 +169,7 @@ export function normalizeStore(input: StoreReview): StoreReview {
     qualityScore: Number(input.qualityScore ?? 0),
     shippingFee: Number(input.shippingFee ?? 0),
     priceScore: Number(input.priceScore ?? 0),
+    referencePrice: Number(input.referencePrice ?? 0),
     mainProducts: input.mainProducts?.trim() ?? "",
     note: input.note?.trim() ?? "",
     createdAt: input.createdAt ?? nowIso(),

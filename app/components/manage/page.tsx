@@ -3,7 +3,7 @@
 import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
-import type { ComponentItem, ComponentType, PurchaseRecord } from "@/lib/types";
+import type { ComponentItem, ComponentType, PurchaseRecord, StoreReview } from "@/lib/types";
 import { formatTime, requestJson } from "@/lib/http-client";
 
 type ComponentForm = {
@@ -15,6 +15,7 @@ type ComponentForm = {
 };
 
 type RecordForm = {
+  storeId: string;
   platform: string;
   link: string;
   quantity: string;
@@ -61,6 +62,7 @@ const initialComponentForm: ComponentForm = {
 };
 
 const initialRecordForm: RecordForm = {
+  storeId: "",
   platform: "",
   link: "",
   quantity: "",
@@ -272,6 +274,7 @@ function ManageComponentsPageInner() {
   const searchParams = useSearchParams();
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
+  const [stores, setStores] = useState<StoreReview[]>([]);
   const [componentForm, setComponentForm] = useState<ComponentForm>(initialComponentForm);
   const [recordForm, setRecordForm] = useState<RecordForm>(initialRecordForm);
   const [editingComponentId, setEditingComponentId] = useState<string | null>(null);
@@ -293,16 +296,19 @@ function ManageComponentsPageInner() {
   const [pendingJsonItems, setPendingJsonItems] = useState<ImportItem[]>([]);
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
+  const storeMap = useMemo(() => new Map(stores.map((item) => [item.id, item])), [stores]);
 
   async function loadData() {
     setError("");
-    const [typesData, componentsData] = await Promise.all([
+    const [typesData, componentsData, storesData] = await Promise.all([
       requestJson<ComponentType[]>("/api/types"),
       requestJson<ComponentItem[]>("/api/components"),
+      requestJson<StoreReview[]>("/api/stores"),
     ]);
 
     setTypes(typesData);
     setComponents(componentsData);
+    setStores(storesData);
     setComponentForm((prev) => ({
       ...prev,
       typeId: prev.typeId || typesData[0]?.id || "",
@@ -444,6 +450,7 @@ function ManageComponentsPageInner() {
     setActiveComponent(component);
     setEditingRecordId(record.id);
     setRecordForm({
+      storeId: record.storeId ?? "",
       platform: record.platform,
       link: record.link,
       quantity: String(record.quantity),
@@ -463,6 +470,7 @@ function ManageComponentsPageInner() {
 
     try {
       const payload = {
+        storeId: recordForm.storeId || undefined,
         platform: recordForm.platform,
         link: recordForm.link,
         quantity: Number(recordForm.quantity),
@@ -839,6 +847,7 @@ function ManageComponentsPageInner() {
                 <table>
                   <thead>
                     <tr>
+                      <th>店铺</th>
                       <th>平台</th>
                       <th>链接</th>
                       <th>数目</th>
@@ -850,6 +859,11 @@ function ManageComponentsPageInner() {
                   <tbody>
                     {item.records.map((record) => (
                       <tr key={record.id}>
+                        <td>
+                          {record.storeId
+                            ? `${storeMap.get(record.storeId)?.platform ?? "未知平台"}/${storeMap.get(record.storeId)?.shopName ?? "未知店铺"}`
+                            : "-"}
+                        </td>
                         <td>{record.platform}</td>
                         <td>
                           <a href={record.link} target="_blank" rel="noreferrer">
@@ -881,7 +895,7 @@ function ManageComponentsPageInner() {
                     ))}
                     {!item.records.length ? (
                       <tr>
-                        <td className="muted text-center" colSpan={6}>
+                        <td className="muted text-center" colSpan={7}>
                           暂无采购记录
                         </td>
                       </tr>
@@ -901,6 +915,26 @@ function ManageComponentsPageInner() {
           <div className="modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <h3>{editingRecordId ? "编辑采购记录" : `新增采购记录 - ${activeComponent.model}`}</h3>
             <form className="stack-form" onSubmit={submitRecord}>
+              <select
+                value={recordForm.storeId}
+                onChange={(event) => {
+                  const selectedStoreId = event.target.value;
+                  const selectedStore = selectedStoreId ? storeMap.get(selectedStoreId) : undefined;
+                  setRecordForm((prev) => ({
+                    ...prev,
+                    storeId: selectedStoreId,
+                    platform: selectedStore?.platform ?? prev.platform,
+                    pricePerUnit: selectedStore ? String(selectedStore.referencePrice) : prev.pricePerUnit,
+                  }));
+                }}
+              >
+                <option value="">不关联店铺</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.platform} / {store.shopName}
+                  </option>
+                ))}
+              </select>
               <input
                 value={recordForm.platform}
                 onChange={(event) => setRecordForm((prev) => ({ ...prev, platform: event.target.value }))}
@@ -931,6 +965,11 @@ function ManageComponentsPageInner() {
                 placeholder="价格（元/个）"
                 required
               />
+              {recordForm.storeId ? (
+                <p className="muted">
+                  已根据店铺自动回填平台与参考价格，可手动调整。
+                </p>
+              ) : null}
               <p className="muted">购买时间按提交记录时自动生成。</p>
               <div className="inline-actions">
                 <button type="submit" className="btn-primary">

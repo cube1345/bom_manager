@@ -10,6 +10,7 @@ type StorePayload = {
   qualityScore?: number;
   shippingFee?: number;
   priceScore?: number;
+  referencePrice?: number;
   mainProducts?: string;
   note?: string;
 };
@@ -20,6 +21,7 @@ function parsePayload(body: StorePayload) {
   const qualityScore = Number(body.qualityScore ?? 0);
   const shippingFee = Number(body.shippingFee ?? 0);
   const priceScore = Number(body.priceScore ?? 0);
+  const referencePrice = Number(body.referencePrice ?? 0);
   const mainProducts = body.mainProducts?.trim() ?? "";
   const note = body.note?.trim() ?? "";
 
@@ -35,6 +37,9 @@ function parsePayload(body: StorePayload) {
   if (!Number.isFinite(shippingFee) || shippingFee < 0) {
     return { error: "邮费必须是大于等于 0 的数字" };
   }
+  if (!Number.isFinite(referencePrice) || referencePrice < 0) {
+    return { error: "参考价格必须是大于等于 0 的数字" };
+  }
 
   return {
     platform,
@@ -42,6 +47,7 @@ function parsePayload(body: StorePayload) {
     qualityScore,
     shippingFee,
     priceScore,
+    referencePrice,
     mainProducts,
     note,
   };

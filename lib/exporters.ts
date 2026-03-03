@@ -35,6 +35,7 @@ export function serializeDbJson(db: BomDatabase) {
 export function renderExcelHtml(db: BomDatabase) {
   const typeMap = new Map(db.types.map((item) => [item.id, item.name]));
   const projectMap = new Map(db.projects.map((item) => [item.id, item.name]));
+  const storeMap = new Map(db.stores.map((item) => [item.id, item]));
 
   const projectsTable = renderTable(
     "项目",
@@ -68,19 +69,23 @@ export function renderExcelHtml(db: BomDatabase) {
 
   const recordsTable = renderTable(
     "采购记录",
-    ["记录id", "元器件id", "型号", "类型", "购买平台", "购买链接", "数目", "价格(元/个)", "购买时间"],
+    ["记录id", "元器件id", "型号", "类型", "店铺", "购买平台", "购买链接", "数目", "价格(元/个)", "购买时间"],
     db.components.flatMap((component) =>
-      component.records.map((record) => [
-        record.id,
-        component.id,
-        component.model,
-        typeMap.get(component.typeId) ?? "未知类型",
-        record.platform,
-        record.link,
-        record.quantity,
-        record.pricePerUnit,
-        record.purchasedAt,
-      ]),
+      component.records.map((record) => {
+        const store = record.storeId ? storeMap.get(record.storeId) : undefined;
+        return [
+          record.id,
+          component.id,
+          component.model,
+          typeMap.get(component.typeId) ?? "未知类型",
+          store ? `${store.platform}/${store.shopName}` : "-",
+          record.platform,
+          record.link,
+          record.quantity,
+          record.pricePerUnit,
+          record.purchasedAt,
+        ];
+      }),
     ),
   );
 
@@ -134,13 +139,14 @@ export function renderExcelHtml(db: BomDatabase) {
 
   const storesTable = renderTable(
     "店铺评价",
-    ["店铺 id", "平台", "店铺名", "质量评分", "价格评分", "邮费(元)", "主卖品", "备注", "创建时间", "更新时间"],
+    ["店铺 id", "平台", "店铺名", "质量评分", "价格评分", "参考价格(元/个)", "邮费(元)", "主卖品", "备注", "创建时间", "更新时间"],
     db.stores.map((item) => [
       item.id,
       item.platform,
       item.shopName,
       item.qualityScore,
       item.priceScore,
+      item.referencePrice,
       item.shippingFee,
       item.mainProducts,
       item.note,

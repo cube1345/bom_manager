@@ -1,37 +1,40 @@
 {
   "types": [
     {
-      "id": "cc9ce178-c448-4bdb-843b-253bf6391fbe",
-      "name": "电阻",
-      "createdAt": "2026-03-03T11:25:31.543Z",
-      "updatedAt": "2026-03-03T11:25:31.543Z"
-    },
-    {
       "id": "2ec2d27b-04c9-4c8c-914f-75affed7442a",
       "name": "电容",
+      "primaryName": "电容",
+      "secondaryName": "",
       "createdAt": "2026-03-03T11:25:36.018Z",
       "updatedAt": "2026-03-03T11:25:36.018Z"
     },
     {
       "id": "9b2d4d64-5c92-4c0d-ad50-cc090fd02269",
       "name": "电感",
+      "primaryName": "电感",
+      "secondaryName": "",
       "createdAt": "2026-03-03T11:25:42.159Z",
       "updatedAt": "2026-03-03T11:25:42.159Z"
     },
     {
       "id": "61e74a03-ec44-4b21-88c1-f9057a9882f4",
       "name": "二极管",
+      "primaryName": "二极管",
+      "secondaryName": "",
       "createdAt": "2026-03-03T11:25:46.475Z",
       "updatedAt": "2026-03-03T11:25:46.475Z"
     },
     {
       "id": "d41cc6fb-4e47-4eac-978a-0cbfd1264a90",
       "name": "三极管",
+      "primaryName": "三极管",
+      "secondaryName": "",
       "createdAt": "2026-03-03T11:25:49.924Z",
       "updatedAt": "2026-03-03T11:25:49.924Z"
     }
   ],
   "components": [],
   "projects": [],
-  "pcbs": []
+  "pcbs": [],
+  "stores": []
 }

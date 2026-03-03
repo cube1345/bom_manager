@@ -10,6 +10,7 @@ type StoreForm = {
   qualityScore: string;
   shippingFee: string;
   priceScore: string;
+  referencePrice: string;
   mainProducts: string;
   note: string;
 };
@@ -20,6 +21,7 @@ const initialForm: StoreForm = {
   qualityScore: "5",
   shippingFee: "0",
   priceScore: "5",
+  referencePrice: "0",
   mainProducts: "",
   note: "",
 };
@@ -58,6 +60,7 @@ export default function StoresPage() {
         qualityScore: Number(form.qualityScore),
         shippingFee: Number(form.shippingFee),
         priceScore: Number(form.priceScore),
+        referencePrice: Number(form.referencePrice),
         mainProducts: form.mainProducts,
         note: form.note,
       };
@@ -152,6 +155,15 @@ export default function StoresPage() {
               placeholder="价格评分（0-5）"
               required
             />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.referencePrice}
+              onChange={(event) => setForm((prev) => ({ ...prev, referencePrice: event.target.value }))}
+              placeholder="参考价格（元/个）"
+              required
+            />
             <textarea
               rows={2}
               value={form.mainProducts}
@@ -197,6 +209,7 @@ export default function StoresPage() {
                   <p>质量评分：{item.qualityScore.toFixed(1)} / 5</p>
                   <p>价格评分：{item.priceScore.toFixed(1)} / 5</p>
                   <p>邮费：¥{item.shippingFee.toFixed(2)}</p>
+                  <p>参考价格：¥{item.referencePrice.toFixed(2)}/个</p>
                   <p>主卖品：{item.mainProducts || "-"}</p>
                   <p>备注：{item.note || "-"}</p>
                   <p>更新时间：{formatTime(item.updatedAt)}</p>
@@ -213,6 +226,7 @@ export default function StoresPage() {
                         qualityScore: String(item.qualityScore),
                         shippingFee: String(item.shippingFee),
                         priceScore: String(item.priceScore),
+                        referencePrice: String(item.referencePrice),
                         mainProducts: item.mainProducts,
                         note: item.note,
                       });

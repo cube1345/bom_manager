@@ -9,6 +9,7 @@ export interface ComponentType {
 
 export interface PurchaseRecord {
   id: string;
+  storeId?: string;
   platform: string;
   link: string;
   quantity: number;
@@ -67,6 +68,7 @@ export interface StoreReview {
   qualityScore: number;
   shippingFee: number;
   priceScore: number;
+  referencePrice: number;
   mainProducts: string;
   note: string;
   createdAt: string;

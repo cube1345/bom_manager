@@ -15,12 +15,14 @@ export async function PUT(
 ) {
   const { id, recordId } = await context.params;
   const body = (await req.json()) as {
+    storeId?: string;
     platform?: string;
     link?: string;
     quantity?: number;
     pricePerUnit?: number;
   };
 
+  const storeId = body.storeId?.trim() || undefined;
   const platform = body.platform?.trim() ?? "";
   const link = body.link?.trim() ?? "";
   const quantity = Number(body.quantity ?? 0);
@@ -31,6 +33,9 @@ export async function PUT(
   }
 
   const db = await readDb();
+  if (storeId && !db.stores.some((item) => item.id === storeId)) {
+    return NextResponse.json({ message: "所选店铺不存在" }, { status: 400 });
+  }
   const componentIndex = db.components.findIndex((item) => item.id === id);
 
   if (componentIndex === -1) {
@@ -45,6 +50,7 @@ export async function PUT(
   const oldRecord = db.components[componentIndex].records[recordIndex];
   db.components[componentIndex].records[recordIndex] = normalizeRecord({
     ...oldRecord,
+    storeId,
     platform,
     link,
     quantity,

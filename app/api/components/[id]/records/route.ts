@@ -13,12 +13,14 @@ export const runtime = "nodejs";
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const body = (await req.json()) as {
+    storeId?: string;
     platform?: string;
     link?: string;
     quantity?: number;
     pricePerUnit?: number;
   };
 
+  const storeId = body.storeId?.trim() || undefined;
   const platform = body.platform?.trim() ?? "";
   const link = body.link?.trim() ?? "";
   const quantity = Number(body.quantity ?? 0);
@@ -29,6 +31,9 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   }
 
   const db = await readDb();
+  if (storeId && !db.stores.some((item) => item.id === storeId)) {
+    return NextResponse.json({ message: "所选店铺不存在" }, { status: 400 });
+  }
   const index = db.components.findIndex((item) => item.id === id);
 
   if (index === -1) {
@@ -38,6 +43,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   const now = nowIso();
   const record = normalizeRecord({
     id: createId(),
+    storeId,
     platform,
     link,
     quantity,
