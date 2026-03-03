@@ -11,6 +11,8 @@
 - 导出 JSON / Excel（`.xls`）
 - PCB 管理（CRUD）与项目用量统计
 - 自动导出 `latest JSON/Excel` + 历史快照
+- 项目管理（一个项目可管理多个 PCB）
+- 自定义数据存储路径（自动迁移并持续保存）
 - 打包 Windows 可执行文件（Electron）
 
 ## 1. 路由结构
@@ -20,6 +22,7 @@
 - `/components`：元器件列表（搜索、筛选、预警）
 - `/components/manage`：元器件管理（含采购记录和批量导入）
 - `/pcbs`：PCB 管理（含 PCB BOM 明细与项目需求统计）
+- `/settings`：系统设置（数据存储路径）
 
 ## 2. 运行开发环境
 

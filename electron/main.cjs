@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require("electron");
 const { spawn } = require("node:child_process");
 const { existsSync } = require("node:fs");
+const { appendFileSync, mkdirSync } = require("node:fs");
 const path = require("node:path");
 
 const DEV_URL = "http://127.0.0.1:3000";
@@ -8,6 +9,17 @@ const PROD_PORT = 4010;
 
 let nextServerProcess;
 let mainWindow;
+
+function logBoot(message) {
+  try {
+    const logDir = path.join(app.getPath("userData"), "logs");
+    mkdirSync(logDir, { recursive: true });
+    const logFile = path.join(logDir, "boot.log");
+    appendFileSync(logFile, `[${new Date().toISOString()}] ${message}\n`, "utf8");
+  } catch {
+    // ignore logging failures
+  }
+}
 
 function resolveServerPath() {
   const appPath = app.getAppPath();
@@ -37,8 +49,12 @@ function createWindow() {
     },
   });
 
-  const target = app.isPackaged ? `http://127.0.0.1:${PROD_PORT}` : DEV_URL;
+  const target = app.isPackaged ? "about:blank" : DEV_URL;
+  logBoot(`createWindow target=${target}`);
   void mainWindow.loadURL(target);
+  mainWindow.webContents.on("did-finish-load", () => {
+    logBoot(`did-finish-load url=${mainWindow?.webContents.getURL() ?? ""}`);
+  });
 }
 
 async function waitForServer(url, timeoutMs = 15000) {
@@ -65,6 +81,7 @@ async function startProdServer() {
   }
 
   const serverPath = resolveServerPath();
+  logBoot(`resolved serverPath=${serverPath}`);
   if (!existsSync(serverPath)) {
     throw new Error(`未找到 Next 服务入口: ${serverPath}`);
   }
@@ -88,6 +105,7 @@ async function startProdServer() {
 
   nextServerProcess.on("error", (err) => {
     console.error("Failed to start Next server:", err);
+    logBoot(`nextServerProcess error=${String(err)}`);
   });
 
   await waitForServer(`http://127.0.0.1:${PROD_PORT}`, 60000);
@@ -98,11 +116,14 @@ app.whenReady().then(async () => {
   try {
     await startProdServer();
     if (mainWindow) {
-      await mainWindow.loadURL(`http://127.0.0.1:${PROD_PORT}`);
+      const runtimeUrl = `http://127.0.0.1:${PROD_PORT}`;
+      logBoot(`loadURL runtime=${runtimeUrl}`);
+      await mainWindow.loadURL(runtimeUrl);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("Application bootstrap failed:", message);
+    logBoot(`bootstrap failed=${message}`);
     if (mainWindow) {
       const safe = message.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
       await mainWindow.loadURL(`data:text/html;charset=utf-8,

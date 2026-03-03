@@ -9,21 +9,21 @@ export async function PUT(
 ) {
   const { id } = await context.params;
   const body = (await req.json()) as {
-    projectName?: string;
+    projectId?: string;
     name?: string;
     version?: string;
     boardQuantity?: number;
     note?: string;
   };
 
-  const projectName = body.projectName?.trim() ?? "";
+  const projectId = body.projectId?.trim() ?? "";
   const name = body.name?.trim() ?? "";
   const version = body.version?.trim() ?? "";
   const boardQuantity = Number(body.boardQuantity ?? 1);
   const note = body.note?.trim() ?? "";
 
-  if (!projectName || !name) {
-    return NextResponse.json({ message: "项目名称和 PCB 名称不能为空" }, { status: 400 });
+  if (!projectId || !name) {
+    return NextResponse.json({ message: "项目和 PCB 名称不能为空" }, { status: 400 });
   }
 
   if (!Number.isFinite(boardQuantity) || boardQuantity <= 0) {
@@ -36,10 +36,15 @@ export async function PUT(
     return NextResponse.json({ message: "PCB 不存在" }, { status: 404 });
   }
 
+  const projectExists = db.projects.some((item) => item.id === projectId);
+  if (!projectExists) {
+    return NextResponse.json({ message: "项目不存在" }, { status: 400 });
+  }
+
   const duplicate = db.pcbs.some(
     (item) =>
       item.id !== id &&
-      item.projectName.toLowerCase() === projectName.toLowerCase() &&
+      item.projectId === projectId &&
       item.name.toLowerCase() === name.toLowerCase() &&
       item.version.toLowerCase() === version.toLowerCase(),
   );
@@ -47,7 +52,7 @@ export async function PUT(
     return NextResponse.json({ message: "该项目下同名同版本 PCB 已存在" }, { status: 400 });
   }
 
-  pcb.projectName = projectName;
+  pcb.projectId = projectId;
   pcb.name = name;
   pcb.version = version;
   pcb.boardQuantity = boardQuantity;

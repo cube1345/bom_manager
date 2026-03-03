@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import * as XLSX from "xlsx";
 import type { ComponentItem, ComponentType, PurchaseRecord } from "@/lib/types";
 import { formatTime, requestJson } from "@/lib/http-client";
 
@@ -36,6 +37,21 @@ type ImportItem = {
   records?: ImportRecord[];
 };
 
+type ImportField =
+  | "typeName"
+  | "model"
+  | "auxInfo"
+  | "note"
+  | "warningThreshold"
+  | "platform"
+  | "link"
+  | "quantity"
+  | "pricePerUnit";
+
+type ColumnMapping = Record<ImportField, string>;
+
+type ImportMode = "none" | "json" | "table";
+
 const initialComponentForm: ComponentForm = {
   typeId: "",
   model: "",
@@ -49,6 +65,42 @@ const initialRecordForm: RecordForm = {
   link: "",
   quantity: "",
   pricePerUnit: "",
+};
+
+const emptyMapping: ColumnMapping = {
+  typeName: "",
+  model: "",
+  auxInfo: "",
+  note: "",
+  warningThreshold: "",
+  platform: "",
+  link: "",
+  quantity: "",
+  pricePerUnit: "",
+};
+
+const importFieldOptions: Array<{ key: ImportField; label: string; required?: boolean }> = [
+  { key: "typeName", label: "类型", required: true },
+  { key: "model", label: "型号", required: true },
+  { key: "auxInfo", label: "辅助信息" },
+  { key: "note", label: "备注" },
+  { key: "warningThreshold", label: "预警阈值" },
+  { key: "platform", label: "采购平台" },
+  { key: "link", label: "采购链接" },
+  { key: "quantity", label: "采购数量" },
+  { key: "pricePerUnit", label: "单价" },
+];
+
+const fieldAliasMap: Record<ImportField, string[]> = {
+  typeName: ["typename", "type", "类别", "类型", "元器件类型"],
+  model: ["model", "型号", "料号", "partnumber", "pn"],
+  auxInfo: ["auxinfo", "辅助信息", "参数", "规格"],
+  note: ["note", "备注", "说明", "comment"],
+  warningThreshold: ["warningthreshold", "预警", "阈值", "库存预警"],
+  platform: ["platform", "平台", "采购平台", "vendor"],
+  link: ["link", "url", "链接", "采购链接"],
+  quantity: ["quantity", "qty", "数量", "数目", "采购数量"],
+  pricePerUnit: ["priceperunit", "price", "单价", "价格", "price/unit"],
 };
 
 function csvSplitLine(line: string) {
@@ -77,32 +129,104 @@ function csvSplitLine(line: string) {
   return result;
 }
 
-function parseCsvToImportItems(text: string): ImportItem[] {
+function normalizeHeaderKey(input: string) {
+  return input.trim().toLowerCase().replace(/[\s_\-\/()\[\]]+/g, "");
+}
+
+function detectColumnMapping(headers: string[]): ColumnMapping {
+  const mapping: ColumnMapping = { ...emptyMapping };
+  const used = new Set<string>();
+
+  for (const field of importFieldOptions) {
+    const aliases = fieldAliasMap[field.key].map((item) => normalizeHeaderKey(item));
+    const found = headers.find((header) => {
+      if (used.has(header)) {
+        return false;
+      }
+      const normalized = normalizeHeaderKey(header);
+      return aliases.some((alias) => normalized.includes(alias) || alias.includes(normalized));
+    });
+
+    if (found) {
+      mapping[field.key] = found;
+      used.add(found);
+    }
+  }
+
+  return mapping;
+}
+
+function parseCsvRows(text: string) {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
   if (lines.length < 2) {
-    return [];
+    return { headers: [] as string[], rows: [] as Array<Record<string, string>> };
   }
 
   const headers = csvSplitLine(lines[0]);
-  const required = ["typeName", "model"];
-  for (const key of required) {
-    if (!headers.includes(key)) {
-      throw new Error(`CSV 缺少必填列: ${key}`);
-    }
+  const rows = lines.slice(1).map((line) => {
+    const values = csvSplitLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] ?? "";
+    });
+    return row;
+  });
+
+  return { headers, rows };
+}
+
+async function parseExcelRows(file: File) {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) {
+    return { headers: [] as string[], rows: [] as Array<Record<string, string>> };
   }
 
-  const getIndex = (name: string) => headers.findIndex((item) => item === name);
+  const sheet = workbook.Sheets[firstSheetName];
+  const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(sheet, {
+    header: 1,
+    defval: "",
+    blankrows: false,
+  });
+
+  if (!matrix.length) {
+    return { headers: [] as string[], rows: [] as Array<Record<string, string>> };
+  }
+
+  const headers = (matrix[0] ?? []).map((item) => String(item ?? "").trim()).filter(Boolean);
+  const rows = matrix.slice(1).map((cells) => {
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = String(cells[index] ?? "").trim();
+    });
+    return row;
+  });
+
+  return { headers, rows };
+}
+
+function buildImportItemsFromRows(rows: Array<Record<string, string>>, mapping: ColumnMapping): ImportItem[] {
+  const typeHeader = mapping.typeName;
+  const modelHeader = mapping.model;
+
+  if (!typeHeader || !modelHeader) {
+    throw new Error("请至少映射“类型”和“型号”列");
+  }
+
   const grouped = new Map<string, ImportItem>();
 
-  for (let i = 1; i < lines.length; i += 1) {
-    const values = csvSplitLine(lines[i]);
-    const pick = (name: string) => {
-      const index = getIndex(name);
-      return index >= 0 ? values[index] ?? "" : "";
+  for (const row of rows) {
+    const pick = (field: ImportField) => {
+      const header = mapping[field];
+      if (!header) {
+        return "";
+      }
+      return (row[header] ?? "").trim();
     };
 
     const typeName = pick("typeName");
@@ -112,7 +236,8 @@ function parseCsvToImportItems(text: string): ImportItem[] {
     }
 
     const key = `${typeName}::${model}`;
-    const warningThreshold = Number(pick("warningThreshold") || 0);
+    const warningThresholdRaw = pick("warningThreshold");
+    const warningThreshold = Number(warningThresholdRaw || 0);
 
     if (!grouped.has(key)) {
       grouped.set(key, {
@@ -158,6 +283,13 @@ function ManageComponentsPageInner() {
   const [appliedRouteKey, setAppliedRouteKey] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+
+  const [importMode, setImportMode] = useState<ImportMode>("none");
+  const [importFileName, setImportFileName] = useState("");
+  const [importHeaders, setImportHeaders] = useState<string[]>([]);
+  const [importRows, setImportRows] = useState<Array<Record<string, string>>>([]);
+  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({ ...emptyMapping });
+  const [pendingJsonItems, setPendingJsonItems] = useState<ImportItem[]>([]);
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
 
@@ -379,20 +511,65 @@ function ManageComponentsPageInner() {
     setInfo("");
 
     try {
-      const content = await file.text();
-      let items: ImportItem[] = [];
+      const lower = file.name.toLowerCase();
+      setImportFileName(file.name);
 
-      if (file.name.endsWith(".json")) {
+      if (lower.endsWith(".json")) {
+        const content = await file.text();
         const parsed = JSON.parse(content) as { items?: ImportItem[] } | ImportItem[];
-        items = Array.isArray(parsed) ? parsed : parsed.items ?? [];
-      } else if (file.name.endsWith(".csv")) {
-        items = parseCsvToImportItems(content);
-      } else {
-        throw new Error("仅支持 .json 或 .csv 文件");
+        const items = Array.isArray(parsed) ? parsed : parsed.items ?? [];
+        if (!items.length) {
+          throw new Error("导入文件中没有有效数据");
+        }
+
+        setImportMode("json");
+        setPendingJsonItems(items);
+        setImportHeaders([]);
+        setImportRows([]);
+        setColumnMapping({ ...emptyMapping });
+        setInfo(`已读取 JSON：${items.length} 条数据，点击“执行导入”即可入库`);
+        return;
+      }
+
+      if (lower.endsWith(".csv") || lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+        const parsed = lower.endsWith(".csv") ? parseCsvRows(await file.text()) : await parseExcelRows(file);
+        if (!parsed.headers.length || !parsed.rows.length) {
+          throw new Error("导入文件中没有可识别的数据行");
+        }
+
+        const detected = detectColumnMapping(parsed.headers);
+        setImportMode("table");
+        setPendingJsonItems([]);
+        setImportHeaders(parsed.headers);
+        setImportRows(parsed.rows);
+        setColumnMapping(detected);
+        setInfo(`已读取 ${file.name}：${parsed.rows.length} 行，已自动识别列名，可手动调整映射后导入`);
+        return;
+      }
+
+      throw new Error("仅支持 .json / .csv / .xlsx / .xls 文件");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "读取导入文件失败");
+      setImportMode("none");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  async function submitMappedImport() {
+    setError("");
+    setInfo("");
+
+    try {
+      let items: ImportItem[] = [];
+      if (importMode === "json") {
+        items = pendingJsonItems;
+      } else if (importMode === "table") {
+        items = buildImportItemsFromRows(importRows, columnMapping);
       }
 
       if (!items.length) {
-        throw new Error("导入文件中没有有效数据");
+        throw new Error("没有可导入的数据，请检查列映射和内容");
       }
 
       const result = await requestJson<{
@@ -411,11 +588,16 @@ function ManageComponentsPageInner() {
         `导入完成：新增类型 ${result.summary.typesCreated}，新增元器件 ${result.summary.componentsCreated}，更新元器件 ${result.summary.componentsUpdated}，新增记录 ${result.summary.recordsAdded}`,
       );
 
+      setImportMode("none");
+      setImportFileName("");
+      setPendingJsonItems([]);
+      setImportHeaders([]);
+      setImportRows([]);
+      setColumnMapping({ ...emptyMapping });
+
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "导入失败");
-    } finally {
-      event.target.value = "";
     }
   }
 
@@ -424,7 +606,7 @@ function ManageComponentsPageInner() {
       <section className="hero-card">
         <div>
           <h1>元器件管理</h1>
-          <p>执行元器件/采购记录 CRUD，并支持 JSON/CSV 批量导入。</p>
+          <p>执行元器件/采购记录 CRUD，并支持 JSON/CSV/Excel 批量导入。</p>
         </div>
       </section>
 
@@ -512,11 +694,86 @@ function ManageComponentsPageInner() {
 
         <article className="panel">
           <h2>批量导入</h2>
-          <p className="muted">支持 `.json` 或 `.csv` 文件。CSV 头部示例：</p>
-          <code className="code-block">
-            typeName,model,auxInfo,note,warningThreshold,platform,link,quantity,pricePerUnit
-          </code>
-          <input type="file" accept=".json,.csv" onChange={handleImportFile} />
+          <p className="muted">支持 `.json` / `.csv` / `.xlsx` / `.xls`，可自动识别并手动映射列名。</p>
+          <input type="file" accept=".json,.csv,.xlsx,.xls" onChange={handleImportFile} />
+
+          {importMode !== "none" ? (
+            <div className="stack-form" style={{ marginTop: 10 }}>
+              <p className="muted">当前文件：{importFileName}</p>
+
+              {importMode === "table" ? (
+                <>
+                  <h3>列映射设置</h3>
+                  <div className="record-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>导入字段</th>
+                          <th>映射列名</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importFieldOptions.map((field) => (
+                          <tr key={field.key}>
+                            <td>
+                              {field.label}
+                              {field.required ? " *" : ""}
+                            </td>
+                            <td>
+                              <select
+                                value={columnMapping[field.key]}
+                                onChange={(event) =>
+                                  setColumnMapping((prev) => ({
+                                    ...prev,
+                                    [field.key]: event.target.value,
+                                  }))
+                                }
+                              >
+                                <option value="">不映射</option>
+                                {importHeaders.map((header) => (
+                                  <option key={`${field.key}-${header}`} value={header}>
+                                    {header}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="muted">预览：共 {importRows.length} 行（仅显示前 5 行）</p>
+                  <code className="code-block">
+                    {JSON.stringify(importRows.slice(0, 5), null, 2)}
+                  </code>
+                </>
+              ) : null}
+
+              {importMode === "json" ? (
+                <p className="muted">JSON 待导入条数：{pendingJsonItems.length}</p>
+              ) : null}
+
+              <div className="inline-actions">
+                <button type="button" className="btn-primary" onClick={() => void submitMappedImport()}>
+                  执行导入
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    setImportMode("none");
+                    setImportFileName("");
+                    setPendingJsonItems([]);
+                    setImportHeaders([]);
+                    setImportRows([]);
+                    setColumnMapping({ ...emptyMapping });
+                  }}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          ) : null}
         </article>
       </section>
 

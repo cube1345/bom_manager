@@ -30,6 +30,14 @@ export interface ComponentItem {
   updatedAt: string;
 }
 
+export interface ProjectItem {
+  id: string;
+  name: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PcbBomItem {
   id: string;
   componentId: string;
@@ -40,7 +48,7 @@ export interface PcbBomItem {
 
 export interface PcbItem {
   id: string;
-  projectName: string;
+  projectId: string;
   name: string;
   version: string;
   boardQuantity: number;
@@ -53,5 +61,6 @@ export interface PcbItem {
 export interface BomDatabase {
   types: ComponentType[];
   components: ComponentItem[];
+  projects: ProjectItem[];
   pcbs: PcbItem[];
 }

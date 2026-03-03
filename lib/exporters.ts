@@ -34,6 +34,13 @@ export function serializeDbJson(db: BomDatabase) {
 
 export function renderExcelHtml(db: BomDatabase) {
   const typeMap = new Map(db.types.map((item) => [item.id, item.name]));
+  const projectMap = new Map(db.projects.map((item) => [item.id, item.name]));
+
+  const projectsTable = renderTable(
+    "项目",
+    ["项目 id", "项目名称", "备注", "创建时间", "更新时间"],
+    db.projects.map((item) => [item.id, item.name, item.note, item.createdAt, item.updatedAt]),
+  );
 
   const typesTable = renderTable(
     "类型",
@@ -82,7 +89,7 @@ export function renderExcelHtml(db: BomDatabase) {
     ["PCB id", "项目", "PCB 名称", "版本", "项目使用 PCB 数量", "备注", "创建时间", "更新时间"],
     db.pcbs.map((item) => [
       item.id,
-      item.projectName,
+      projectMap.get(item.projectId) ?? "未知项目",
       item.name,
       item.version,
       item.boardQuantity,
@@ -112,7 +119,7 @@ export function renderExcelHtml(db: BomDatabase) {
         return [
           item.id,
           pcb.id,
-          pcb.projectName,
+          projectMap.get(pcb.projectId) ?? "未知项目",
           pcb.name,
           pcb.version,
           item.componentId,
@@ -139,6 +146,7 @@ export function renderExcelHtml(db: BomDatabase) {
       </head>
       <body>
         ${typesTable}
+        ${projectsTable}
         ${componentsTable}
         ${recordsTable}
         ${pcbTable}

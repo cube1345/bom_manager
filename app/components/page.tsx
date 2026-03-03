@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { ComponentItem, ComponentType, PcbItem } from "@/lib/types";
+import type { ComponentItem, ComponentType, PcbItem, ProjectItem } from "@/lib/types";
 import { formatTime, requestJson, triggerDownload } from "@/lib/http-client";
 
 function isWarning(item: ComponentItem) {
@@ -17,6 +17,7 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
   const [pcbs, setPcbs] = useState<PcbItem[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [keyword, setKeyword] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [warningOnly, setWarningOnly] = useState(false);
@@ -28,11 +29,13 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
       requestJson<ComponentType[]>("/api/types"),
       requestJson<ComponentItem[]>("/api/components"),
       requestJson<PcbItem[]>("/api/pcbs"),
+      requestJson<ProjectItem[]>("/api/projects"),
     ])
-      .then(([typesData, componentsData, pcbData]) => {
+      .then(([typesData, componentsData, pcbData, projectData]) => {
         setTypes(typesData);
         setComponents(componentsData);
         setPcbs(pcbData);
+        setProjects(projectData);
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "加载失败");
@@ -40,10 +43,12 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
   }, []);
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
+  const projectMap = useMemo(() => new Map(projects.map((item) => [item.id, item.name])), [projects]);
   const pcbUsageMap = useMemo(() => {
     const map = new Map<string, { totalRequired: number; pcbNames: Set<string> }>();
     for (const pcb of pcbs) {
-      const pcbName = `${pcb.projectName}/${pcb.name}${pcb.version ? `(${pcb.version})` : ""}`;
+      const projectName = projectMap.get(pcb.projectId) ?? "未知项目";
+      const pcbName = `${projectName}/${pcb.name}${pcb.version ? `(${pcb.version})` : ""}`;
       for (const item of pcb.items) {
         if (!map.has(item.componentId)) {
           map.set(item.componentId, { totalRequired: 0, pcbNames: new Set<string>() });
@@ -54,7 +59,7 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
       }
     }
     return map;
-  }, [pcbs]);
+  }, [pcbs, projectMap]);
 
   const filtered = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -112,6 +117,9 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
           </Link>
           <Link href="/pcbs" className="btn-secondary btn-link home-quick-action">
             PCB管理
+          </Link>
+          <Link href="/settings" className="btn-secondary btn-link home-quick-action">
+            存储设置
           </Link>
           <button type="button" className="btn-secondary" onClick={() => triggerDownload("/api/export/json")}>
             导出 JSON

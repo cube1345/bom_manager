@@ -2,14 +2,14 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { serializeDbExcel, serializeDbJson } from "./exporters";
-import type { BomDatabase, ComponentItem, PcbBomItem, PcbItem, PurchaseRecord } from "./types";
+import { getStorageDir } from "./storage-config";
+import type { BomDatabase, ComponentItem, PcbBomItem, PcbItem, ProjectItem, PurchaseRecord } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "bom-data.json");
-const EXPORT_DIR = path.join(DATA_DIR, "exports");
-const SNAPSHOT_DIR = path.join(DATA_DIR, "snapshots");
-const LATEST_JSON_FILE = path.join(EXPORT_DIR, "bom-data.latest.json");
-const LATEST_EXCEL_FILE = path.join(EXPORT_DIR, "bom-data.latest.xls");
+const DATA_FILE_NAME = "bom-data.json";
+const EXPORT_DIR_NAME = "exports";
+const SNAPSHOT_DIR_NAME = "snapshots";
+const LATEST_JSON_FILE_NAME = "bom-data.latest.json";
+const LATEST_EXCEL_FILE_NAME = "bom-data.latest.xls";
 const MAX_SNAPSHOTS = 120;
 
 const defaultDb: BomDatabase = {
@@ -34,6 +34,7 @@ const defaultDb: BomDatabase = {
     },
   ],
   components: [],
+  projects: [],
   pcbs: [],
 };
 
@@ -112,7 +113,7 @@ export function normalizePcbBomItem(input: PcbBomItem): PcbBomItem {
 export function normalizePcb(input: PcbItem): PcbItem {
   return {
     id: input.id,
-    projectName: input.projectName?.trim() ?? "",
+    projectId: input.projectId,
     name: input.name?.trim() ?? "",
     version: input.version?.trim() ?? "",
     boardQuantity: Number(input.boardQuantity ?? 1),
@@ -123,16 +124,42 @@ export function normalizePcb(input: PcbItem): PcbItem {
   };
 }
 
+export function normalizeProject(input: ProjectItem): ProjectItem {
+  return {
+    id: input.id,
+    name: input.name?.trim() ?? "",
+    note: input.note?.trim() ?? "",
+    createdAt: input.createdAt ?? nowIso(),
+    updatedAt: input.updatedAt ?? nowIso(),
+  };
+}
+
 async function ensureDbFile() {
-  await mkdir(DATA_DIR, { recursive: true });
-  await mkdir(EXPORT_DIR, { recursive: true });
-  await mkdir(SNAPSHOT_DIR, { recursive: true });
+  const paths = await getDataPaths();
+  await mkdir(paths.dataDir, { recursive: true });
+  await mkdir(paths.exportDir, { recursive: true });
+  await mkdir(paths.snapshotDir, { recursive: true });
   try {
-    await readFile(DATA_FILE, "utf8");
+    await readFile(paths.dataFile, "utf8");
   } catch {
-    await writeFile(DATA_FILE, serializeDbJson(defaultDb), "utf8");
+    await writeFile(paths.dataFile, serializeDbJson(defaultDb), "utf8");
     await writeAutoExports(defaultDb);
   }
+}
+
+async function getDataPaths() {
+  const dataDir = await getStorageDir();
+  const exportDir = path.join(dataDir, EXPORT_DIR_NAME);
+  const snapshotDir = path.join(dataDir, SNAPSHOT_DIR_NAME);
+
+  return {
+    dataDir,
+    dataFile: path.join(dataDir, DATA_FILE_NAME),
+    exportDir,
+    snapshotDir,
+    latestJsonFile: path.join(exportDir, LATEST_JSON_FILE_NAME),
+    latestExcelFile: path.join(exportDir, LATEST_EXCEL_FILE_NAME),
+  };
 }
 
 function sliceFirstJsonRoot(raw: string): string {
@@ -197,6 +224,39 @@ function sliceFirstJsonRoot(raw: string): string {
 }
 
 function normalizeDb(parsed: BomDatabase): BomDatabase {
+  const sourceProjects = (parsed.projects ?? []).map((item) => normalizeProject(item as ProjectItem));
+  const projectByName = new Map(sourceProjects.map((item) => [item.name.toLowerCase(), item]));
+
+  // Backward compatible migration: legacy pcb.projectName -> projects + pcb.projectId.
+  const normalizedPcbs = (parsed.pcbs ?? []).map((item) => {
+    const legacy = item as PcbItem & { projectName?: string };
+    let projectId = legacy.projectId;
+
+    if (!projectId) {
+      const legacyProjectName = legacy.projectName?.trim() ?? "默认项目";
+      const key = legacyProjectName.toLowerCase();
+      let project = projectByName.get(key);
+      if (!project) {
+        const now = nowIso();
+        project = {
+          id: createId(),
+          name: legacyProjectName,
+          note: "",
+          createdAt: now,
+          updatedAt: now,
+        };
+        sourceProjects.push(project);
+        projectByName.set(key, project);
+      }
+      projectId = project.id;
+    }
+
+    return normalizePcb({
+      ...legacy,
+      projectId,
+    } as PcbItem);
+  });
+
   return {
     types: parsed.types ?? [],
     components: (parsed.components ?? []).map((item) =>
@@ -205,7 +265,8 @@ function normalizeDb(parsed: BomDatabase): BomDatabase {
         warningThreshold: Number(item.warningThreshold ?? 0),
       } as ComponentItem),
     ),
-    pcbs: (parsed.pcbs ?? []).map((item) => normalizePcb(item as PcbItem)),
+    projects: sourceProjects,
+    pcbs: normalizedPcbs,
   };
 }
 
@@ -214,7 +275,8 @@ function getSnapshotName() {
 }
 
 async function cleanupOldSnapshots() {
-  const files = (await readdir(SNAPSHOT_DIR))
+  const paths = await getDataPaths();
+  const files = (await readdir(paths.snapshotDir))
     .filter((file) => file.endsWith(".json"))
     .sort();
 
@@ -223,24 +285,26 @@ async function cleanupOldSnapshots() {
   }
 
   const staleFiles = files.slice(0, files.length - MAX_SNAPSHOTS);
-  await Promise.all(staleFiles.map((file) => unlink(path.join(SNAPSHOT_DIR, file)).catch(() => {})));
+  await Promise.all(staleFiles.map((file) => unlink(path.join(paths.snapshotDir, file)).catch(() => {})));
 }
 
 async function writeAutoExports(db: BomDatabase) {
+  const paths = await getDataPaths();
   const jsonText = serializeDbJson(db);
   const excelText = serializeDbExcel(db);
 
   await Promise.all([
-    writeFile(LATEST_JSON_FILE, jsonText, "utf8"),
-    writeFile(LATEST_EXCEL_FILE, excelText, "utf8"),
-    writeFile(path.join(SNAPSHOT_DIR, `bom-data.${getSnapshotName()}.json`), jsonText, "utf8"),
+    writeFile(paths.latestJsonFile, jsonText, "utf8"),
+    writeFile(paths.latestExcelFile, excelText, "utf8"),
+    writeFile(path.join(paths.snapshotDir, `bom-data.${getSnapshotName()}.json`), jsonText, "utf8"),
   ]);
 
   await cleanupOldSnapshots();
 }
 
 async function tryRecoverFromLatestSnapshot() {
-  const files = (await readdir(SNAPSHOT_DIR))
+  const paths = await getDataPaths();
+  const files = (await readdir(paths.snapshotDir))
     .filter((file) => file.endsWith(".json"))
     .sort();
 
@@ -249,13 +313,14 @@ async function tryRecoverFromLatestSnapshot() {
     return null;
   }
 
-  const snapshotRaw = await readFile(path.join(SNAPSHOT_DIR, latest), "utf8");
+  const snapshotRaw = await readFile(path.join(paths.snapshotDir, latest), "utf8");
   return JSON.parse(snapshotRaw) as BomDatabase;
 }
 
 export async function readDb(): Promise<BomDatabase> {
   await ensureDbFile();
-  const raw = await readFile(DATA_FILE, "utf8");
+  const paths = await getDataPaths();
+  const raw = await readFile(paths.dataFile, "utf8");
   let parsed: BomDatabase | null = null;
   let shouldPersist = false;
 
@@ -277,10 +342,18 @@ export async function readDb(): Promise<BomDatabase> {
     shouldPersist = true;
   }
 
+  const schemaNeedsPersist =
+    !Array.isArray((parsed as { projects?: unknown }).projects) ||
+    ((parsed as { pcbs?: Array<{ projectId?: string }> }).pcbs ?? []).some((item) => !item.projectId);
+
+  if (schemaNeedsPersist) {
+    shouldPersist = true;
+  }
+
   const normalized = normalizeDb(parsed);
 
   if (shouldPersist) {
-    await writeFile(DATA_FILE, serializeDbJson(normalized), "utf8");
+    await writeFile(paths.dataFile, serializeDbJson(normalized), "utf8");
     await writeAutoExports(normalized);
   }
 
@@ -289,9 +362,13 @@ export async function readDb(): Promise<BomDatabase> {
 
 export async function writeDb(db: BomDatabase): Promise<void> {
   await ensureDbFile();
+  const paths = await getDataPaths();
   const normalized = normalizeDb(db);
-  await writeFile(DATA_FILE, serializeDbJson(normalized), "utf8");
+  await writeFile(paths.dataFile, serializeDbJson(normalized), "utf8");
   await writeAutoExports(normalized);
 }
 
-export { DATA_FILE };
+export async function getDataFilePath() {
+  const paths = await getDataPaths();
+  return paths.dataFile;
+}

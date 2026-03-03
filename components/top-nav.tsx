@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/", label: "首页" },
   { href: "/pcbs", label: "PCB管理" },
+  { href: "/settings", label: "设置" },
   { href: "/types", label: "类型管理" },
   { href: "/components", label: "元器件列表" },
   { href: "/components/manage", label: "元器件管理" },
