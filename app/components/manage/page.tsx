@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { ComponentItem, ComponentType, PurchaseRecord } from "@/lib/types";
 import { formatTime, requestJson } from "@/lib/http-client";
 
@@ -142,7 +143,8 @@ function parseCsvToImportItems(text: string): ImportItem[] {
   return Array.from(grouped.values());
 }
 
-export default function ManageComponentsPage() {
+function ManageComponentsPageInner() {
+  const searchParams = useSearchParams();
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
   const [componentForm, setComponentForm] = useState<ComponentForm>(initialComponentForm);
@@ -151,6 +153,9 @@ export default function ManageComponentsPage() {
   const [activeComponent, setActiveComponent] = useState<ComponentItem | null>(null);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [recordModalOpen, setRecordModalOpen] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [appliedRouteKey, setAppliedRouteKey] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
@@ -169,6 +174,7 @@ export default function ManageComponentsPage() {
       ...prev,
       typeId: prev.typeId || typesData[0]?.id || "",
     }));
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -217,6 +223,66 @@ export default function ManageComponentsPage() {
       note: item.note,
       warningThreshold: String(item.warningThreshold ?? 0),
     });
+  }
+
+  useEffect(() => {
+    if (!loaded) {
+      return;
+    }
+
+    const mode = searchParams.get("mode");
+    const componentId = searchParams.get("componentId");
+    const routeKey = `${mode ?? ""}:${componentId ?? ""}`;
+
+    if (!routeKey || routeKey === ":" || routeKey === appliedRouteKey) {
+      return;
+    }
+
+    if (mode === "new") {
+      setEditingComponentId(null);
+      setComponentForm({
+        ...initialComponentForm,
+        typeId: types[0]?.id ?? "",
+        warningThreshold: "0",
+      });
+      setAppliedRouteKey(routeKey);
+      return;
+    }
+
+    if (mode === "edit" && componentId) {
+      const target = components.find((item) => item.id === componentId);
+      if (target) {
+        startEditComponent(target);
+      } else {
+        setError("要编辑的元器件不存在");
+      }
+      setAppliedRouteKey(routeKey);
+    }
+  }, [appliedRouteKey, components, loaded, searchParams, types]);
+
+  async function createTypeInline(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = newTypeName.trim();
+    if (!name) {
+      return;
+    }
+
+    setError("");
+    setInfo("");
+
+    try {
+      const created = await requestJson<ComponentType>("/api/types", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+
+      setNewTypeName("");
+      await loadData();
+      setComponentForm((prev) => ({ ...prev, typeId: created.id }));
+      setInfo(`类型 "${created.name}" 已创建并写入 JSON`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "新增类型失败");
+    }
   }
 
   async function removeComponent(id: string) {
@@ -428,6 +494,20 @@ export default function ManageComponentsPage() {
               ) : null}
             </div>
           </form>
+
+          <hr className="split-line" />
+          <h3>快速新增类型</h3>
+          <form className="inline-create-form" onSubmit={createTypeInline}>
+            <input
+              value={newTypeName}
+              onChange={(event) => setNewTypeName(event.target.value)}
+              placeholder="输入新类型名称，例如：连接器"
+              required
+            />
+            <button type="submit" className="btn-secondary">
+              新增类型
+            </button>
+          </form>
         </article>
 
         <article className="panel">
@@ -600,5 +680,13 @@ export default function ManageComponentsPage() {
         </div>
       ) : null}
     </>
+  );
+}
+
+export default function ManageComponentsPage() {
+  return (
+    <Suspense fallback={<section className="panel muted">加载中...</section>}>
+      <ManageComponentsPageInner />
+    </Suspense>
   );
 }

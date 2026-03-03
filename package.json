@@ -1,6 +1,8 @@
 {
   "name": "bom_manager",
   "version": "0.1.0",
+  "description": "电子元器件与PCB管理工具",
+  "author": "BOM Manager Team",
   "main": "electron/main.cjs",
   "private": true,
   "scripts": {
@@ -9,7 +11,9 @@
     "start": "next start",
     "lint": "eslint",
     "electron:dev": "concurrently \"pnpm dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
-    "electron:dist": "pnpm build && electron-builder --win --x64"
+    "electron:dist": "pnpm build && node scripts/prepare-electron.cjs && electron-builder --win --x64",
+    "electron:dist:dir": "pnpm build && node scripts/prepare-electron.cjs && electron-builder --win --x64 --dir",
+    "electron:dist:portable": "pnpm build && node scripts/prepare-electron.cjs && electron-builder --win portable --x64"
   },
   "dependencies": {
     "next": "16.1.6",
@@ -36,13 +40,14 @@
     "asar": false,
     "files": [
       "electron/**/*",
-      ".next/standalone/**/*",
+      ".next/standalone-electron/**/*",
       ".next/static/**/*",
       "public/**/*",
       "data/**/*",
       "package.json"
     ],
     "win": {
+      "signAndEditExecutable": false,
       "target": [
         "nsis"
       ]

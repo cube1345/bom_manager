@@ -9,6 +9,8 @@
 - 批量导入（JSON / CSV）
 - 库存预警（阈值可配置）
 - 导出 JSON / Excel（`.xls`）
+- PCB 管理（CRUD）与项目用量统计
+- 自动导出 `latest JSON/Excel` + 历史快照
 - 打包 Windows 可执行文件（Electron）
 
 ## 1. 路由结构
@@ -17,6 +19,7 @@
 - `/types`：类型管理
 - `/components`：元器件列表（搜索、筛选、预警）
 - `/components/manage`：元器件管理（含采购记录和批量导入）
+- `/pcbs`：PCB 管理（含 PCB BOM 明细与项目需求统计）
 
 ## 2. 运行开发环境
 
@@ -66,6 +69,16 @@ typeName,model,auxInfo,note,warningThreshold,platform,link,quantity,pricePerUnit
 - 导出 JSON
 - 导出 Excel（`.xls`，可用 Excel 直接打开）
 
+系统自动导出：
+
+- `data/exports/bom-data.latest.json`
+- `data/exports/bom-data.latest.xls`
+
+持续记忆（历史快照）：
+
+- `data/snapshots/bom-data.YYYY-MM-DDTHH-mm-ss-sssZ.json`
+- 每次新增/编辑/删除都会自动生成快照，并自动保留最近 120 份。
+
 ## 6. 打包 Windows 可执行文件
 
 ```bash
@@ -75,6 +88,8 @@ pnpm electron:dist
 ```
 
 生成目录：`dist/`（包含 `.exe` 安装包）。
+
+说明：打包后的软件仍使用本地 `data` 目录进行持久化，重启后会自动恢复数据。
 
 ## 7. Electron 本地调试
 

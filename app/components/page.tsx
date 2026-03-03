@@ -1,16 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { ComponentItem, ComponentType } from "@/lib/types";
+import type { ComponentItem, ComponentType, PcbItem } from "@/lib/types";
 import { formatTime, requestJson, triggerDownload } from "@/lib/http-client";
 
 function isWarning(item: ComponentItem) {
   return item.warningThreshold > 0 && item.totalQuantity <= item.warningThreshold;
 }
 
-export default function ComponentsPage() {
+type ComponentsPageProps = {
+  entryMode?: "home" | "list";
+};
+
+export default function ComponentsPage({ entryMode = "list" }: ComponentsPageProps) {
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
+  const [pcbs, setPcbs] = useState<PcbItem[]>([]);
   const [keyword, setKeyword] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [warningOnly, setWarningOnly] = useState(false);
@@ -21,10 +27,12 @@ export default function ComponentsPage() {
     void Promise.all([
       requestJson<ComponentType[]>("/api/types"),
       requestJson<ComponentItem[]>("/api/components"),
+      requestJson<PcbItem[]>("/api/pcbs"),
     ])
-      .then(([typesData, componentsData]) => {
+      .then(([typesData, componentsData, pcbData]) => {
         setTypes(typesData);
         setComponents(componentsData);
+        setPcbs(pcbData);
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "加载失败");
@@ -32,6 +40,21 @@ export default function ComponentsPage() {
   }, []);
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
+  const pcbUsageMap = useMemo(() => {
+    const map = new Map<string, { totalRequired: number; pcbNames: Set<string> }>();
+    for (const pcb of pcbs) {
+      const pcbName = `${pcb.projectName}/${pcb.name}${pcb.version ? `(${pcb.version})` : ""}`;
+      for (const item of pcb.items) {
+        if (!map.has(item.componentId)) {
+          map.set(item.componentId, { totalRequired: 0, pcbNames: new Set<string>() });
+        }
+        const row = map.get(item.componentId)!;
+        row.totalRequired += item.quantityPerBoard * pcb.boardQuantity;
+        row.pcbNames.add(pcbName);
+      }
+    }
+    return map;
+  }, [pcbs]);
 
   const filtered = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -71,15 +94,25 @@ export default function ComponentsPage() {
   }, [components, keyword, sortBy, typeFilter, typeMap, warningOnly]);
 
   const warningCount = components.filter(isWarning).length;
+  const isHome = entryMode === "home";
 
   return (
     <>
       <section className="hero-card">
         <div>
-          <h1>元器件列表</h1>
-          <p>支持关键词搜索、筛选和库存预警定位。</p>
+          <h1>{isHome ? "元器件首页" : "元器件列表"}</h1>
+          <p>支持关键词搜索、筛选和库存预警定位，并可直接跳转到新增与编辑。</p>
         </div>
         <div className="toolbar">
+          <Link href="/components/manage?mode=new" className="btn-primary btn-link home-quick-action home-quick-action-primary">
+            新增元器件
+          </Link>
+          <Link href="/types" className="btn-secondary btn-link home-quick-action">
+            新增类型
+          </Link>
+          <Link href="/pcbs" className="btn-secondary btn-link home-quick-action">
+            PCB管理
+          </Link>
           <button type="button" className="btn-secondary" onClick={() => triggerDownload("/api/export/json")}>
             导出 JSON
           </button>
@@ -133,7 +166,12 @@ export default function ComponentsPage() {
                 <h3>{item.model}</h3>
                 <p>{typeMap.get(item.typeId) ?? "未知类型"}</p>
               </div>
-              {isWarning(item) ? <span className="badge-warning">库存预警</span> : null}
+              <div className="inline-actions">
+                {isWarning(item) ? <span className="badge-warning">库存预警</span> : null}
+                <Link href={`/components/manage?mode=edit&componentId=${item.id}`} className="btn-ghost btn-link">
+                  编辑
+                </Link>
+              </div>
             </header>
 
             <div className="meta-grid">
@@ -160,6 +198,18 @@ export default function ComponentsPage() {
               <div>
                 <span>更新时间</span>
                 <p>{formatTime(item.updatedAt)}</p>
+              </div>
+              <div>
+                <span>关联 PCB 数</span>
+                <p>{pcbUsageMap.get(item.id)?.pcbNames.size ?? 0}</p>
+              </div>
+              <div>
+                <span>PCB 需求总量</span>
+                <p>{pcbUsageMap.get(item.id)?.totalRequired ?? 0}</p>
+              </div>
+              <div>
+                <span>关联 PCB</span>
+                <p>{Array.from(pcbUsageMap.get(item.id)?.pcbNames ?? []).join("，") || "-"}</p>
               </div>
             </div>
           </article>

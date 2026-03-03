@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require("electron");
 const { spawn } = require("node:child_process");
+const { existsSync } = require("node:fs");
 const path = require("node:path");
 
 const DEV_URL = "http://127.0.0.1:3000";
@@ -7,6 +8,20 @@ const PROD_PORT = 4010;
 
 let nextServerProcess;
 let mainWindow;
+
+function resolveServerPath() {
+  const appPath = app.getAppPath();
+  const candidates = [
+    path.join(process.resourcesPath, "app", ".next", "standalone-electron", "server.js"),
+    path.join(appPath, ".next", "standalone-electron", "server.js"),
+    path.join(process.resourcesPath, "app.asar.unpacked", ".next", "standalone", "server.js"),
+    path.join(appPath, ".next", "standalone", "server.js"),
+    path.join(process.resourcesPath, "app", ".next", "standalone", "server.js"),
+    path.join(process.resourcesPath, "app.asar", ".next", "standalone", "server.js"),
+  ];
+
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -49,8 +64,10 @@ async function startProdServer() {
     return;
   }
 
-  const appPath = app.getAppPath();
-  const serverPath = path.join(appPath, ".next", "standalone", "server.js");
+  const serverPath = resolveServerPath();
+  if (!existsSync(serverPath)) {
+    throw new Error(`未找到 Next 服务入口: ${serverPath}`);
+  }
 
   nextServerProcess = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
@@ -69,12 +86,33 @@ async function startProdServer() {
     }
   });
 
-  await waitForServer(`http://127.0.0.1:${PROD_PORT}`);
+  nextServerProcess.on("error", (err) => {
+    console.error("Failed to start Next server:", err);
+  });
+
+  await waitForServer(`http://127.0.0.1:${PROD_PORT}`, 60000);
 }
 
 app.whenReady().then(async () => {
-  await startProdServer();
   createWindow();
+  try {
+    await startProdServer();
+    if (mainWindow) {
+      await mainWindow.loadURL(`http://127.0.0.1:${PROD_PORT}`);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Application bootstrap failed:", message);
+    if (mainWindow) {
+      const safe = message.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+      await mainWindow.loadURL(`data:text/html;charset=utf-8,
+        <html><body style="font-family:Segoe UI;padding:24px;">
+          <h2>启动失败</h2>
+          <p>本地服务未能启动，请将以下信息反馈给开发者：</p>
+          <pre style="white-space:pre-wrap;background:#f6f8fa;padding:12px;border-radius:8px;">${safe}</pre>
+        </body></html>`);
+    }
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

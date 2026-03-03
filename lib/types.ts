@@ -30,7 +30,28 @@ export interface ComponentItem {
   updatedAt: string;
 }
 
+export interface PcbBomItem {
+  id: string;
+  componentId: string;
+  quantityPerBoard: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PcbItem {
+  id: string;
+  projectName: string;
+  name: string;
+  version: string;
+  boardQuantity: number;
+  note: string;
+  items: PcbBomItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BomDatabase {
   types: ComponentType[];
   components: ComponentItem[];
+  pcbs: PcbItem[];
 }
