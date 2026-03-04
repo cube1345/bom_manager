@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { tr, useUiLang } from "@/lib/ui-language";
 
 const navItems = [
   { href: "/pcbs", label: { zh: "PCB管理", en: "PCB" } },
@@ -14,28 +14,7 @@ const navItems = [
 
 export default function TopNav() {
   const pathname = usePathname();
-  const [lang, setLang] = useState<"zh" | "en">("zh");
-
-  useEffect(() => {
-    const syncLang = () => {
-      const stored = window.localStorage.getItem("bom-manager-lang");
-      setLang(stored === "en" ? "en" : "zh");
-    };
-    syncLang();
-
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === "bom-manager-lang") {
-        syncLang();
-      }
-    };
-    const onPreferenceChange = () => syncLang();
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("bom-manager-preferences", onPreferenceChange);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("bom-manager-preferences", onPreferenceChange);
-    };
-  }, []);
+  const lang = useUiLang();
 
   return (
     <header className="top-nav panel">
@@ -50,7 +29,7 @@ export default function TopNav() {
           );
         })}
         <Link href="/" className={pathname === "/" ? "nav-link active nav-link-home" : "nav-link nav-link-home"}>
-          {lang === "en" ? "Home" : "返回首页"}
+          {tr(lang, "返回首页", "Home")}
         </Link>
       </nav>
     </header>

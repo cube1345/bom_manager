@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { StarRating, StarRatingInput } from "@/components/star-rating";
 import type { StoreReview } from "@/lib/types";
 import { formatTime, requestJson } from "@/lib/http-client";
+import { useUiLang } from "@/lib/ui-language";
 
 type StoreForm = {
   platform: string;
@@ -26,28 +28,118 @@ const initialForm: StoreForm = {
   note: "",
 };
 
+function normalizeStarValue(value: number) {
+  const clamped = Math.max(0.5, Math.min(5, value));
+  return Math.round(clamped * 2) / 2;
+}
+
 export default function StoresPage() {
+  const lang = useUiLang();
   const [stores, setStores] = useState<StoreReview[]>([]);
   const [form, setForm] = useState<StoreForm>(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const text =
+    lang === "en"
+      ? {
+          loadError: "Failed to load store reviews",
+          saveError: "Failed to save store review",
+          deleteError: "Failed to delete store review",
+          deleteConfirm: "Delete this store review?",
+          title: "Store Reviews",
+          subtitle: "Maintain platform stores with quality, shipping, pricing, and product notes.",
+          editTitle: "Edit Store",
+          createTitle: "New Store",
+          platform: "Platform:",
+          platformPlaceholder: "e.g. Taobao / LCSC",
+          shopName: "Store Name:",
+          shopNamePlaceholder: "Enter store name",
+          qualityScore: "Quality Rating:",
+          shippingFee: "Shipping Fee (CNY):",
+          shippingFeePlaceholder: "e.g. 6.50",
+          priceScore: "Price Rating:",
+          referencePrice: "Reference Price (CNY/unit):",
+          referencePricePlaceholder: "e.g. 0.15",
+          mainProducts: "Main Products:",
+          mainProductsPlaceholder: "e.g. chip resistors, capacitors",
+          note: "Note:",
+          notePlaceholder: "Additional notes",
+          update: "Update",
+          add: "Add",
+          cancel: "Cancel",
+          listTitle: "Store List",
+          loading: "Loading...",
+          qualityLine: "Quality:",
+          priceLine: "Price:",
+          shippingLine: "Shipping:",
+          referenceLine: "Reference:",
+          productsLine: "Main Products:",
+          noteLine: "Note:",
+          updatedAt: "Updated At:",
+          editBtn: "Edit",
+          deleteBtn: "Delete",
+          empty: "No store review data yet.",
+          currentScore: "Current score: ",
+          outOfFive: "/ 5",
+        }
+      : {
+          loadError: "加载失败",
+          saveError: "保存失败",
+          deleteError: "删除失败",
+          deleteConfirm: "确认删除该店铺评价？",
+          title: "平台店铺评价",
+          subtitle: "维护各平台店铺的质量、邮费、价格与主卖品信息。",
+          editTitle: "编辑店铺",
+          createTitle: "新增店铺",
+          platform: "平台：",
+          platformPlaceholder: "例如：淘宝 / 立创商城",
+          shopName: "店铺名称：",
+          shopNamePlaceholder: "请输入店铺名称",
+          qualityScore: "质量评分：",
+          shippingFee: "平均邮费（元）：",
+          shippingFeePlaceholder: "例如：6.50",
+          priceScore: "价格评分：",
+          referencePrice: "参考价格（元/个）：",
+          referencePricePlaceholder: "例如：0.15",
+          mainProducts: "主卖品：",
+          mainProductsPlaceholder: "例如：贴片电阻、电容",
+          note: "备注：",
+          notePlaceholder: "可填写补充信息",
+          update: "更新",
+          add: "新增",
+          cancel: "取消",
+          listTitle: "店铺列表",
+          loading: "加载中...",
+          qualityLine: "质量评分：",
+          priceLine: "价格评分：",
+          shippingLine: "邮费：",
+          referenceLine: "参考价格：",
+          productsLine: "主卖品：",
+          noteLine: "备注：",
+          updatedAt: "更新时间：",
+          editBtn: "编辑",
+          deleteBtn: "删除",
+          empty: "暂无店铺评价数据。",
+          currentScore: "当前评分：",
+          outOfFive: " / 5",
+        };
 
-  async function loadStores() {
+  const loadStores = useCallback(async () => {
     setLoading(true);
     try {
       const data = await requestJson<StoreReview[]>("/api/stores");
       setStores(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
+      setError(err instanceof Error ? err.message : text.loadError);
     } finally {
       setLoading(false);
     }
-  }
+  }, [text.loadError]);
 
   useEffect(() => {
     void loadStores();
-  }, []);
+  }, [loadStores]);
 
   async function submitStore(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,12 +173,12 @@ export default function StoresPage() {
       setForm(initialForm);
       await loadStores();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "保存失败");
+      setError(err instanceof Error ? err.message : text.saveError);
     }
   }
 
   async function removeStore(id: string) {
-    if (!window.confirm("确认删除该店铺评价？")) {
+    if (!window.confirm(text.deleteConfirm)) {
       return;
     }
 
@@ -95,7 +187,7 @@ export default function StoresPage() {
       await requestJson(`/api/stores/${id}`, { method: "DELETE" });
       await loadStores();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "删除失败");
+      setError(err instanceof Error ? err.message : text.deleteError);
     }
   }
 
@@ -103,8 +195,8 @@ export default function StoresPage() {
     <>
       <section className="hero-card">
         <div>
-          <h1>平台店铺评价</h1>
-          <p>维护各平台店铺的质量、邮费、价格与主卖品信息。</p>
+          <h1>{text.title}</h1>
+          <p>{text.subtitle}</p>
         </div>
       </section>
 
@@ -112,12 +204,12 @@ export default function StoresPage() {
 
       <section className="grid-two">
         <article className="panel">
-          <h2>{editingId ? "编辑店铺" : "新增店铺"}</h2>
+          <h2>{editingId ? text.editTitle : text.createTitle}</h2>
           <form className="stack-form" onSubmit={submitStore}>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="store-platform">
-                  平台：
+                  {text.platform}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -127,14 +219,14 @@ export default function StoresPage() {
                 id="store-platform"
                 value={form.platform}
                 onChange={(event) => setForm((prev) => ({ ...prev, platform: event.target.value }))}
-                placeholder="例如：淘宝 / 立创商城"
+                placeholder={text.platformPlaceholder}
                 required
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="store-name">
-                  店铺名称：
+                  {text.shopName}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -144,35 +236,58 @@ export default function StoresPage() {
                 id="store-name"
                 value={form.shopName}
                 onChange={(event) => setForm((prev) => ({ ...prev, shopName: event.target.value }))}
-                placeholder="请输入店铺名称"
+                placeholder={text.shopNamePlaceholder}
                 required
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="store-quality-score">
-                  质量评分（0-5）：
+                  {text.qualityScore}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
                 </span>
               </div>
-              <input
-                id="store-quality-score"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                value={form.qualityScore}
-                onChange={(event) => setForm((prev) => ({ ...prev, qualityScore: event.target.value }))}
-                placeholder="例如：4.8"
-                required
-              />
+              <div id="store-quality-score">
+                <StarRatingInput
+                  lang={lang}
+                  value={Number(form.qualityScore || 0)}
+                  onChange={(next) => setForm((prev) => ({ ...prev, qualityScore: String(normalizeStarValue(next)) }))}
+                />
+              </div>
+              <p className="muted">
+                {text.currentScore}
+                {normalizeStarValue(Number(form.qualityScore || 0)).toFixed(1)}
+                {text.outOfFive}
+              </p>
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-price-score">
+                  {text.priceScore}
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <div id="store-price-score">
+                <StarRatingInput
+                  lang={lang}
+                  value={Number(form.priceScore || 0)}
+                  onChange={(next) => setForm((prev) => ({ ...prev, priceScore: String(normalizeStarValue(next)) }))}
+                />
+              </div>
+              <p className="muted">
+                {text.currentScore}
+                {normalizeStarValue(Number(form.priceScore || 0)).toFixed(1)}
+                {text.outOfFive}
+              </p>
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="store-shipping-fee">
-                  平均邮费（元）：
+                  {text.shippingFee}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -185,35 +300,14 @@ export default function StoresPage() {
                 step="0.01"
                 value={form.shippingFee}
                 onChange={(event) => setForm((prev) => ({ ...prev, shippingFee: event.target.value }))}
-                placeholder="例如：6.50"
-                required
-              />
-            </div>
-            <div className="form-field">
-              <div className="field-head">
-                <label className="field-label" htmlFor="store-price-score">
-                  价格评分（0-5）：
-                </label>
-                <span className="field-required" aria-hidden="true">
-                  *
-                </span>
-              </div>
-              <input
-                id="store-price-score"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                value={form.priceScore}
-                onChange={(event) => setForm((prev) => ({ ...prev, priceScore: event.target.value }))}
-                placeholder="例如：4.6"
+                placeholder={text.shippingFeePlaceholder}
                 required
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="store-reference-price">
-                  参考价格（元/个）：
+                  {text.referencePrice}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -226,14 +320,14 @@ export default function StoresPage() {
                 step="0.01"
                 value={form.referencePrice}
                 onChange={(event) => setForm((prev) => ({ ...prev, referencePrice: event.target.value }))}
-                placeholder="例如：0.15"
+                placeholder={text.referencePricePlaceholder}
                 required
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="store-main-products">
-                  主卖品：
+                  {text.mainProducts}
                 </label>
               </div>
               <textarea
@@ -241,13 +335,13 @@ export default function StoresPage() {
                 rows={2}
                 value={form.mainProducts}
                 onChange={(event) => setForm((prev) => ({ ...prev, mainProducts: event.target.value }))}
-                placeholder="例如：贴片电阻、电容"
+                placeholder={text.mainProductsPlaceholder}
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="store-note">
-                  备注：
+                  {text.note}
                 </label>
               </div>
               <textarea
@@ -255,12 +349,12 @@ export default function StoresPage() {
                 rows={2}
                 value={form.note}
                 onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
-                placeholder="可填写补充信息"
+                placeholder={text.notePlaceholder}
               />
             </div>
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
-                {editingId ? "更新" : "新增"}
+                {editingId ? text.update : text.add}
               </button>
               {editingId ? (
                 <button
@@ -271,7 +365,7 @@ export default function StoresPage() {
                     setForm(initialForm);
                   }}
                 >
-                  取消
+                  {text.cancel}
                 </button>
               ) : null}
             </div>
@@ -279,8 +373,8 @@ export default function StoresPage() {
         </article>
 
         <article className="panel">
-          <h2>店铺列表</h2>
-          {loading ? <p className="muted">加载中...</p> : null}
+          <h2>{text.listTitle}</h2>
+          {loading ? <p className="muted">{text.loading}</p> : null}
           <div className="type-list">
             {stores.map((item) => (
               <div className="type-item" key={item.id}>
@@ -288,13 +382,17 @@ export default function StoresPage() {
                   <strong>
                     {item.platform} / {item.shopName}
                   </strong>
-                  <p>质量评分：{item.qualityScore.toFixed(1)} / 5</p>
-                  <p>价格评分：{item.priceScore.toFixed(1)} / 5</p>
-                  <p>邮费：¥{item.shippingFee.toFixed(2)}</p>
-                  <p>参考价格：¥{item.referencePrice.toFixed(2)}/个</p>
-                  <p>主卖品：{item.mainProducts || "-"}</p>
-                  <p>备注：{item.note || "-"}</p>
-                  <p>更新时间：{formatTime(item.updatedAt)}</p>
+                  <p>
+                    {text.qualityLine} <StarRating value={item.qualityScore} /> {item.qualityScore.toFixed(1)} / 5
+                  </p>
+                  <p>
+                    {text.priceLine} <StarRating value={item.priceScore} /> {item.priceScore.toFixed(1)} / 5
+                  </p>
+                  <p>{text.shippingLine} ¥{item.shippingFee.toFixed(2)}</p>
+                  <p>{text.referenceLine} ¥{item.referencePrice.toFixed(2)}{lang === "en" ? "/unit" : "/个"}</p>
+                  <p>{text.productsLine} {item.mainProducts || "-"}</p>
+                  <p>{text.noteLine} {item.note || "-"}</p>
+                  <p>{text.updatedAt} {formatTime(item.updatedAt)}</p>
                 </div>
                 <div className="inline-actions">
                   <button
@@ -314,15 +412,15 @@ export default function StoresPage() {
                       });
                     }}
                   >
-                    编辑
+                    {text.editBtn}
                   </button>
                   <button type="button" className="btn-danger" onClick={() => void removeStore(item.id)}>
-                    删除
+                    {text.deleteBtn}
                   </button>
                 </div>
               </div>
             ))}
-            {!stores.length && !loading ? <p className="muted">暂无店铺评价数据。</p> : null}
+            {!stores.length && !loading ? <p className="muted">{text.empty}</p> : null}
           </div>
         </article>
       </section>

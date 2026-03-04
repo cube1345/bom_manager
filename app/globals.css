@@ -234,6 +234,66 @@ a {
   line-height: 1;
 }
 
+.star-rating,
+.star-rating-input {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.star-rating-input-wrap {
+  display: grid;
+  gap: 4px;
+}
+
+.star-cell {
+  position: relative;
+  width: 1.2em;
+  height: 1.2em;
+  display: inline-flex;
+}
+
+.star-icon {
+  position: relative;
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.star-base {
+  color: #cbd5e1;
+}
+
+.star-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+  color: #f59e0b;
+  white-space: nowrap;
+}
+
+.star-hit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  opacity: 0;
+  border-radius: 0;
+}
+
+.star-hit-left {
+  left: 0;
+}
+
+.star-hit-right {
+  right: 0;
+}
+
 input,
 textarea,
 select {
@@ -583,6 +643,14 @@ th {
 :root[data-theme="dark"] .type-item p,
 :root[data-theme="dark"] .muted {
   color: #93a4bd;
+}
+
+:root[data-theme="dark"] .star-base {
+  color: #475569;
+}
+
+:root[data-theme="dark"] .star-fill {
+  color: #fbbf24;
 }
 
 :root[data-theme="dark"] input,

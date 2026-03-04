@@ -4,8 +4,8 @@ import UiPreferenceBootstrap from "@/components/ui-preference-bootstrap";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "电子元器件智能管理系统",
-  description: "本地化电子元器件与采购记录管理工具",
+  title: "BOM Manager",
+  description: "Local component, PCB, and purchase record management tool",
 };
 
 export default function RootLayout({

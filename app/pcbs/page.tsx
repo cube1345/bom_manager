@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { ComponentItem, ComponentType, PcbBomItem, PcbItem, ProjectItem } from "@/lib/types";
 import { formatTime, requestJson } from "@/lib/http-client";
+import { useUiLang } from "@/lib/ui-language";
 
 type ProjectForm = {
   name: string;
@@ -27,6 +28,7 @@ const initialPcbForm: PcbForm = { projectId: "", name: "", version: "", boardQua
 const initialBomForm: PcbBomForm = { componentId: "", quantityPerBoard: "1" };
 
 export default function PcbsPage() {
+  const lang = useUiLang();
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
@@ -42,6 +44,154 @@ export default function PcbsPage() {
   const [projectFilter, setProjectFilter] = useState("all");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const text =
+    lang === "en"
+      ? {
+          loadError: "Failed to load data",
+          unknownProject: "Unknown Project",
+          saveProjectError: "Failed to save project",
+          deleteProjectConfirm: "Delete this project?",
+          deleteProjectError: "Failed to delete project",
+          savePcbError: "Failed to save PCB",
+          deletePcbConfirm: "Delete this PCB and all BOM items?",
+          deletePcbError: "Failed to delete PCB",
+          saveBomError: "Failed to save BOM item",
+          deleteBomConfirm: "Delete this BOM item?",
+          deleteBomError: "Failed to delete BOM item",
+          pageTitle: "Project / PCB Management",
+          pageSubtitle: "Each project can contain multiple PCBs, and each PCB maintains an independent BOM.",
+          editProject: "Edit Project",
+          addProject: "New Project",
+          projectName: "Project Name:",
+          projectNamePlaceholder: "e.g. Thermal Controller Mainboard",
+          projectNote: "Project Note:",
+          projectNotePlaceholder: "Project description",
+          updateProject: "Update Project",
+          createProject: "Create Project",
+          cancel: "Cancel",
+          editPcb: "Edit PCB",
+          addPcb: "New PCB",
+          targetProject: "Project:",
+          selectProject: "Select project",
+          pcbName: "PCB Name:",
+          pcbNamePlaceholder: "e.g. Main Control Board",
+          version: "Version:",
+          versionPlaceholder: "Optional, e.g. v1.2",
+          boardQuantity: "Board Quantity in Project:",
+          boardQuantityPlaceholder: "e.g. 10",
+          pcbNote: "PCB Note:",
+          pcbNotePlaceholder: "Version differences or notes",
+          updatePcb: "Update PCB",
+          createPcb: "Create PCB",
+          summaryTitle: "Project Filter & Demand Summary",
+          allProjects: "All Projects",
+          colType: "Type",
+          colModel: "Model",
+          colTotalDemand: "Total Demand",
+          colRelatedPcb: "Related PCB",
+          unknownType: "Unknown Type",
+          unknownComponent: "Unknown Component",
+          noSummary: "No summary data",
+          listTitle: "Project List (with Independent PCB Management)",
+          noProjectNote: "No project note",
+          editProjectBtn: "Edit Project",
+          deleteProjectBtn: "Delete Project",
+          pcbSummaryPrefix: "Project Qty",
+          pcbSummaryMid: "BOM",
+          updatedAt: "Updated",
+          bomDetail: "BOM Details",
+          editPcbBtn: "Edit PCB",
+          deletePcbBtn: "Delete PCB",
+          noPcb: "No PCB under this project.",
+          editBom: "Edit BOM Item",
+          addBom: "New BOM Item",
+          component: "Component:",
+          selectComponent: "Select component",
+          qtyPerBoard: "Qty per Board:",
+          qtyPerBoardPlaceholder: "e.g. 2",
+          colPerBoard: "Qty per Board",
+          colProjectTotal: "Project Total",
+          colAction: "Action",
+          edit: "Edit",
+          delete: "Delete",
+          noBom: "No BOM items",
+          saveBom: "Save Item",
+          addBomBtn: "Add Item",
+          close: "Close",
+        }
+      : {
+          loadError: "加载失败",
+          unknownProject: "未知项目",
+          saveProjectError: "保存项目失败",
+          deleteProjectConfirm: "确认删除该项目？",
+          deleteProjectError: "删除项目失败",
+          savePcbError: "保存 PCB 失败",
+          deletePcbConfirm: "确认删除该 PCB 及其所有 BOM 明细？",
+          deletePcbError: "删除 PCB 失败",
+          saveBomError: "保存 BOM 明细失败",
+          deleteBomConfirm: "确认删除该 BOM 明细？",
+          deleteBomError: "删除 BOM 明细失败",
+          pageTitle: "项目 / PCB 管理",
+          pageSubtitle: "一个项目可挂载多个 PCB，每个 PCB 都可独立维护 BOM 明细。",
+          editProject: "编辑项目",
+          addProject: "新增项目",
+          projectName: "项目名称：",
+          projectNamePlaceholder: "例如：温控主板项目",
+          projectNote: "项目备注：",
+          projectNotePlaceholder: "可填写项目说明",
+          updateProject: "更新项目",
+          createProject: "创建项目",
+          cancel: "取消",
+          editPcb: "编辑 PCB",
+          addPcb: "新增 PCB",
+          targetProject: "所属项目：",
+          selectProject: "请选择项目",
+          pcbName: "PCB 名称：",
+          pcbNamePlaceholder: "例如：主控板",
+          version: "版本号：",
+          versionPlaceholder: "可选，例如：v1.2",
+          boardQuantity: "项目用板数量：",
+          boardQuantityPlaceholder: "例如：10",
+          pcbNote: "PCB 备注：",
+          pcbNotePlaceholder: "可填写版本差异说明",
+          updatePcb: "更新 PCB",
+          createPcb: "创建 PCB",
+          summaryTitle: "项目筛选与需求统计",
+          allProjects: "全部项目",
+          colType: "类型",
+          colModel: "型号",
+          colTotalDemand: "总需求",
+          colRelatedPcb: "涉及 PCB",
+          unknownType: "未知类型",
+          unknownComponent: "未知元器件",
+          noSummary: "暂无统计数据",
+          listTitle: "项目列表（下属 PCB 独立管理）",
+          noProjectNote: "无项目备注",
+          editProjectBtn: "编辑项目",
+          deleteProjectBtn: "删除项目",
+          pcbSummaryPrefix: "项目数量",
+          pcbSummaryMid: "BOM",
+          updatedAt: "更新时间",
+          bomDetail: "BOM明细",
+          editPcbBtn: "编辑PCB",
+          deletePcbBtn: "删除PCB",
+          noPcb: "该项目下暂无 PCB。",
+          editBom: "编辑 BOM 明细",
+          addBom: "新增 BOM 明细",
+          component: "元器件：",
+          selectComponent: "请选择元器件",
+          qtyPerBoard: "单板需求数量：",
+          qtyPerBoardPlaceholder: "例如：2",
+          colPerBoard: "单板需求",
+          colProjectTotal: "项目总需求",
+          colAction: "操作",
+          edit: "编辑",
+          delete: "删除",
+          noBom: "暂无 BOM 明细",
+          saveBom: "保存明细",
+          addBomBtn: "新增明细",
+          close: "关闭",
+        };
 
   async function loadData() {
     const [typesData, componentsData, projectsData, pcbsData] = await Promise.all([
@@ -71,8 +221,8 @@ export default function PcbsPage() {
         setPcbs(pcbsData);
         setPcbForm((prev) => ({ ...prev, projectId: prev.projectId || projectsData[0]?.id || "" }));
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "加载失败"));
-  }, []);
+      .catch((err) => setError(err instanceof Error ? err.message : text.loadError));
+  }, [text.loadError]);
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
   const componentMap = useMemo(() => new Map(components.map((item) => [item.id, item])), [components]);
@@ -97,7 +247,7 @@ export default function PcbsPage() {
   const requirementSummary = useMemo(() => {
     const map = new Map<string, { componentId: string; totalRequired: number; pcbNames: Set<string> }>();
     for (const pcb of filteredPcbs) {
-      const projectName = projectMap.get(pcb.projectId)?.name ?? "未知项目";
+      const projectName = projectMap.get(pcb.projectId)?.name ?? text.unknownProject;
       const label = `${projectName}/${pcb.name}${pcb.version ? `(${pcb.version})` : ""}`;
       for (const item of pcb.items) {
         if (!map.has(item.componentId)) {
@@ -109,7 +259,7 @@ export default function PcbsPage() {
       }
     }
     return Array.from(map.values()).sort((a, b) => b.totalRequired - a.totalRequired);
-  }, [filteredPcbs, projectMap]);
+  }, [filteredPcbs, projectMap, text.unknownProject]);
 
   async function submitProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,17 +281,17 @@ export default function PcbsPage() {
       setProjectForm(initialProjectForm);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "保存项目失败");
+      setError(err instanceof Error ? err.message : text.saveProjectError);
     }
   }
 
   async function removeProject(id: string) {
-    if (!window.confirm("确认删除该项目？")) return;
+    if (!window.confirm(text.deleteProjectConfirm)) return;
     try {
       await requestJson(`/api/projects/${id}`, { method: "DELETE" });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "删除项目失败");
+      setError(err instanceof Error ? err.message : text.deleteProjectError);
     }
   }
 
@@ -160,17 +310,17 @@ export default function PcbsPage() {
       setPcbForm({ ...initialPcbForm, projectId: projects[0]?.id ?? "" });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "保存 PCB 失败");
+      setError(err instanceof Error ? err.message : text.savePcbError);
     }
   }
 
   async function removePcb(id: string) {
-    if (!window.confirm("确认删除该 PCB 及其所有 BOM 明细？")) return;
+    if (!window.confirm(text.deletePcbConfirm)) return;
     try {
       await requestJson(`/api/pcbs/${id}`, { method: "DELETE" });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "删除 PCB 失败");
+      setError(err instanceof Error ? err.message : text.deletePcbError);
     }
   }
 
@@ -221,17 +371,17 @@ export default function PcbsPage() {
       setBomForm(initialBomForm);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "保存 BOM 明细失败");
+      setError(err instanceof Error ? err.message : text.saveBomError);
     }
   }
 
   async function removeBom(pcbId: string, itemId: string) {
-    if (!window.confirm("确认删除该 BOM 明细？")) return;
+    if (!window.confirm(text.deleteBomConfirm)) return;
     try {
       await requestJson(`/api/pcbs/${pcbId}/items/${itemId}`, { method: "DELETE" });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "删除 BOM 明细失败");
+      setError(err instanceof Error ? err.message : text.deleteBomError);
     }
   }
 
@@ -239,8 +389,8 @@ export default function PcbsPage() {
     <>
       <section className="hero-card">
         <div>
-          <h1>项目 / PCB 管理</h1>
-          <p>一个项目可挂载多个 PCB，每个 PCB 都可独立维护 BOM 明细。</p>
+          <h1>{text.pageTitle}</h1>
+          <p>{text.pageSubtitle}</p>
         </div>
       </section>
 
@@ -249,12 +399,12 @@ export default function PcbsPage() {
 
       <section className="grid-two">
         <article className="panel">
-          <h2>{editingProjectId ? "编辑项目" : "新增项目"}</h2>
+          <h2>{editingProjectId ? text.editProject : text.addProject}</h2>
           <form className="stack-form" onSubmit={submitProject}>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="project-name">
-                  项目名称：
+                  {text.projectName}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -264,34 +414,34 @@ export default function PcbsPage() {
                 id="project-name"
                 value={projectForm.name}
                 onChange={(event) => setProjectForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="例如：温控主板项目"
+                placeholder={text.projectNamePlaceholder}
                 required
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="project-note">
-                  项目备注：
+                  {text.projectNote}
                 </label>
               </div>
               <textarea
                 id="project-note"
                 value={projectForm.note}
                 onChange={(event) => setProjectForm((prev) => ({ ...prev, note: event.target.value }))}
-                placeholder="可填写项目说明"
+                placeholder={text.projectNotePlaceholder}
                 rows={2}
               />
             </div>
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
-                {editingProjectId ? "更新项目" : "创建项目"}
+                {editingProjectId ? text.updateProject : text.createProject}
               </button>
               {editingProjectId ? (
                 <button type="button" className="btn-ghost" onClick={() => {
                   setEditingProjectId(null);
                   setProjectForm(initialProjectForm);
                 }}>
-                  取消
+                  {text.cancel}
                 </button>
               ) : null}
             </div>
@@ -299,12 +449,12 @@ export default function PcbsPage() {
         </article>
 
         <article className="panel">
-          <h2>{editingPcbId ? "编辑 PCB" : "新增 PCB"}</h2>
+          <h2>{editingPcbId ? text.editPcb : text.addPcb}</h2>
           <form className="stack-form" onSubmit={submitPcb}>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="pcb-project-id">
-                  所属项目：
+                  {text.targetProject}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -316,7 +466,7 @@ export default function PcbsPage() {
                 onChange={(event) => setPcbForm((prev) => ({ ...prev, projectId: event.target.value }))}
                 required
               >
-                <option value="">请选择项目</option>
+                <option value="">{text.selectProject}</option>
                 {projects.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -327,7 +477,7 @@ export default function PcbsPage() {
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="pcb-name">
-                  PCB 名称：
+                  {text.pcbName}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -337,27 +487,27 @@ export default function PcbsPage() {
                 id="pcb-name"
                 value={pcbForm.name}
                 onChange={(event) => setPcbForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="例如：主控板"
+                placeholder={text.pcbNamePlaceholder}
                 required
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="pcb-version">
-                  版本号：
+                  {text.version}
                 </label>
               </div>
               <input
                 id="pcb-version"
                 value={pcbForm.version}
                 onChange={(event) => setPcbForm((prev) => ({ ...prev, version: event.target.value }))}
-                placeholder="可选，例如：v1.2"
+                placeholder={text.versionPlaceholder}
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="pcb-board-quantity">
-                  项目用板数量：
+                  {text.boardQuantity}
                 </label>
                 <span className="field-required" aria-hidden="true">
                   *
@@ -370,34 +520,34 @@ export default function PcbsPage() {
                 step="1"
                 value={pcbForm.boardQuantity}
                 onChange={(event) => setPcbForm((prev) => ({ ...prev, boardQuantity: event.target.value }))}
-                placeholder="例如：10"
+                placeholder={text.boardQuantityPlaceholder}
                 required
               />
             </div>
             <div className="form-field">
               <div className="field-head">
                 <label className="field-label" htmlFor="pcb-note">
-                  PCB 备注：
+                  {text.pcbNote}
                 </label>
               </div>
               <textarea
                 id="pcb-note"
                 value={pcbForm.note}
                 onChange={(event) => setPcbForm((prev) => ({ ...prev, note: event.target.value }))}
-                placeholder="可填写版本差异说明"
+                placeholder={text.pcbNotePlaceholder}
                 rows={2}
               />
             </div>
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
-                {editingPcbId ? "更新 PCB" : "创建 PCB"}
+                {editingPcbId ? text.updatePcb : text.createPcb}
               </button>
               {editingPcbId ? (
                 <button type="button" className="btn-ghost" onClick={() => {
                   setEditingPcbId(null);
                   setPcbForm({ ...initialPcbForm, projectId: projects[0]?.id ?? "" });
                 }}>
-                  取消
+                  {text.cancel}
                 </button>
               ) : null}
             </div>
@@ -407,9 +557,9 @@ export default function PcbsPage() {
 
       <section className="panel">
         <div className="section-title">
-          <h2>项目筛选与需求统计</h2>
+          <h2>{text.summaryTitle}</h2>
           <select value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)}>
-            <option value="all">全部项目</option>
+            <option value="all">{text.allProjects}</option>
             {projects.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -421,10 +571,10 @@ export default function PcbsPage() {
           <table>
             <thead>
               <tr>
-                <th>类型</th>
-                <th>型号</th>
-                <th>总需求</th>
-                <th>涉及 PCB</th>
+                <th>{text.colType}</th>
+                <th>{text.colModel}</th>
+                <th>{text.colTotalDemand}</th>
+                <th>{text.colRelatedPcb}</th>
               </tr>
             </thead>
             <tbody>
@@ -432,16 +582,16 @@ export default function PcbsPage() {
                 const component = componentMap.get(item.componentId);
                 return (
                   <tr key={item.componentId}>
-                    <td>{component ? (typeMap.get(component.typeId) ?? "未知类型") : "未知类型"}</td>
-                    <td>{component?.model ?? "未知元器件"}</td>
+                    <td>{component ? (typeMap.get(component.typeId) ?? text.unknownType) : text.unknownType}</td>
+                    <td>{component?.model ?? text.unknownComponent}</td>
                     <td>{item.totalRequired}</td>
-                    <td>{Array.from(item.pcbNames).join("，") || "-"}</td>
+                    <td>{Array.from(item.pcbNames).join(lang === "en" ? ", " : "，") || "-"}</td>
                   </tr>
                 );
               })}
               {!requirementSummary.length ? (
                 <tr>
-                  <td className="muted text-center" colSpan={4}>暂无统计数据</td>
+                  <td className="muted text-center" colSpan={4}>{text.noSummary}</td>
                 </tr>
               ) : null}
             </tbody>
@@ -450,14 +600,14 @@ export default function PcbsPage() {
       </section>
 
       <section className="panel">
-        <h2>项目列表（下属 PCB 独立管理）</h2>
+        <h2>{text.listTitle}</h2>
         <div className="component-list">
           {groupedByProject.map(({ project, pcbs: projectPcbs }) => (
             <article className="component-card" key={project.id}>
               <header>
                 <div>
                   <h3>{project.name}</h3>
-                  <p>{project.note || "无项目备注"}</p>
+                  <p>{project.note || text.noProjectNote}</p>
                 </div>
                 <div className="inline-actions">
                   <button
@@ -468,10 +618,10 @@ export default function PcbsPage() {
                       setProjectForm({ name: project.name, note: project.note });
                     }}
                   >
-                    编辑项目
+                    {text.editProjectBtn}
                   </button>
                   <button type="button" className="btn-danger" onClick={() => void removeProject(project.id)}>
-                    删除项目
+                    {text.deleteProjectBtn}
                   </button>
                 </div>
               </header>
@@ -485,23 +635,23 @@ export default function PcbsPage() {
                         {pcb.version ? ` (${pcb.version})` : ""}
                       </strong>
                       <p>
-                        项目数量 {pcb.boardQuantity} / BOM {pcb.items.length} / 更新时间 {formatTime(pcb.updatedAt)}
+                        {text.pcbSummaryPrefix} {pcb.boardQuantity} / {text.pcbSummaryMid} {pcb.items.length} / {text.updatedAt} {formatTime(pcb.updatedAt)}
                       </p>
                     </div>
                     <div className="inline-actions">
                       <button type="button" className="btn-primary" onClick={() => openNewBom(pcb)}>
-                        BOM明细
+                        {text.bomDetail}
                       </button>
                       <button type="button" className="btn-ghost" onClick={() => startEditPcb(pcb)}>
-                        编辑PCB
+                        {text.editPcbBtn}
                       </button>
                       <button type="button" className="btn-danger" onClick={() => void removePcb(pcb.id)}>
-                        删除PCB
+                        {text.deletePcbBtn}
                       </button>
                     </div>
                   </article>
                 ))}
-                {!projectPcbs.length ? <p className="muted">该项目下暂无 PCB。</p> : null}
+                {!projectPcbs.length ? <p className="muted">{text.noPcb}</p> : null}
               </div>
             </article>
           ))}
@@ -511,12 +661,12 @@ export default function PcbsPage() {
       {bomModalOpen && activePcb ? (
         <div className="modal-overlay" role="presentation" onClick={() => setBomModalOpen(false)}>
           <div className="modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <h3>{editingBomId ? "编辑 BOM 明细" : `新增 BOM 明细 - ${activePcb.name}`}</h3>
+            <h3>{editingBomId ? text.editBom : `${text.addBom} - ${activePcb.name}`}</h3>
             <form className="stack-form" onSubmit={submitBom}>
               <div className="form-field">
                 <div className="field-head">
                   <label className="field-label" htmlFor="bom-component-id">
-                    元器件：
+                    {text.component}
                   </label>
                   <span className="field-required" aria-hidden="true">
                     *
@@ -528,10 +678,10 @@ export default function PcbsPage() {
                   onChange={(event) => setBomForm((prev) => ({ ...prev, componentId: event.target.value }))}
                   required
                 >
-                  <option value="">请选择元器件</option>
+                  <option value="">{text.selectComponent}</option>
                   {components.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {typeMap.get(item.typeId) ?? "未知类型"} / {item.model}
+                      {typeMap.get(item.typeId) ?? text.unknownType} / {item.model}
                     </option>
                   ))}
                 </select>
@@ -539,7 +689,7 @@ export default function PcbsPage() {
               <div className="form-field">
                 <div className="field-head">
                   <label className="field-label" htmlFor="bom-quantity-per-board">
-                    单板需求数量：
+                    {text.qtyPerBoard}
                   </label>
                   <span className="field-required" aria-hidden="true">
                     *
@@ -552,7 +702,7 @@ export default function PcbsPage() {
                   step="1"
                   value={bomForm.quantityPerBoard}
                   onChange={(event) => setBomForm((prev) => ({ ...prev, quantityPerBoard: event.target.value }))}
-                  placeholder="例如：2"
+                  placeholder={text.qtyPerBoardPlaceholder}
                   required
                 />
               </div>
@@ -560,11 +710,11 @@ export default function PcbsPage() {
                 <table>
                   <thead>
                     <tr>
-                      <th>类型</th>
-                      <th>型号</th>
-                      <th>单板需求</th>
-                      <th>项目总需求</th>
-                      <th>操作</th>
+                      <th>{text.colType}</th>
+                      <th>{text.colModel}</th>
+                      <th>{text.colPerBoard}</th>
+                      <th>{text.colProjectTotal}</th>
+                      <th>{text.colAction}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -572,21 +722,21 @@ export default function PcbsPage() {
                       const component = componentMap.get(item.componentId);
                       return (
                         <tr key={item.id}>
-                          <td>{component ? (typeMap.get(component.typeId) ?? "未知类型") : "未知类型"}</td>
-                          <td>{component?.model ?? "未知元器件"}</td>
+                          <td>{component ? (typeMap.get(component.typeId) ?? text.unknownType) : text.unknownType}</td>
+                          <td>{component?.model ?? text.unknownComponent}</td>
                           <td>{item.quantityPerBoard}</td>
                           <td>{item.quantityPerBoard * activePcb.boardQuantity}</td>
                           <td>
                             <div className="inline-actions">
                               <button type="button" className="btn-ghost" onClick={() => openEditBom(activePcb, item)}>
-                                编辑
+                                {text.edit}
                               </button>
                               <button
                                 type="button"
                                 className="btn-danger"
                                 onClick={() => void removeBom(activePcb.id, item.id)}
                               >
-                                删除
+                                {text.delete}
                               </button>
                             </div>
                           </td>
@@ -595,15 +745,15 @@ export default function PcbsPage() {
                     })}
                     {!activePcb.items.length ? (
                       <tr>
-                        <td className="muted text-center" colSpan={5}>暂无 BOM 明细</td>
+                        <td className="muted text-center" colSpan={5}>{text.noBom}</td>
                       </tr>
                     ) : null}
                   </tbody>
                 </table>
               </div>
               <div className="inline-actions">
-                <button type="submit" className="btn-primary">{editingBomId ? "保存明细" : "新增明细"}</button>
-                <button type="button" className="btn-ghost" onClick={() => setBomModalOpen(false)}>关闭</button>
+                <button type="submit" className="btn-primary">{editingBomId ? text.saveBom : text.addBomBtn}</button>
+                <button type="button" className="btn-ghost" onClick={() => setBomModalOpen(false)}>{text.close}</button>
               </div>
             </form>
           </div>

@@ -92,8 +92,8 @@ export default function SettingsPage() {
         setCurrentDir(res.dataDir);
         setConfigFile(res.configFile ?? "");
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "加载设置失败 / Failed to load settings"));
-  }, []);
+      .catch((err) => setError(err instanceof Error ? err.message : text.loadedError));
+  }, [text.loadedError]);
 
   async function submitStorage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

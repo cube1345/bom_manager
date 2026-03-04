@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentItem, ComponentType, PcbItem, ProjectItem } from "@/lib/types";
 import { formatTime, requestJson, triggerDownload } from "@/lib/http-client";
+import { tr, useUiLang } from "@/lib/ui-language";
 
 function isWarning(item: ComponentItem) {
   return item.warningThreshold > 0 && item.totalQuantity <= item.warningThreshold;
@@ -14,6 +15,7 @@ type ComponentsPageProps = {
 };
 
 export default function ComponentsPage({ entryMode = "list" }: ComponentsPageProps) {
+  const lang = useUiLang();
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
   const [pcbs, setPcbs] = useState<PcbItem[]>([]);
@@ -38,16 +40,16 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
         setProjects(projectData);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : "加载失败");
+        setError(err instanceof Error ? err.message : tr(lang, "加载失败", "Failed to load data"));
       });
-  }, []);
+  }, [lang]);
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
   const projectMap = useMemo(() => new Map(projects.map((item) => [item.id, item.name])), [projects]);
   const pcbUsageMap = useMemo(() => {
     const map = new Map<string, { totalRequired: number; pcbNames: Set<string> }>();
     for (const pcb of pcbs) {
-      const projectName = projectMap.get(pcb.projectId) ?? "未知项目";
+      const projectName = projectMap.get(pcb.projectId) ?? tr(lang, "未知项目", "Unknown Project");
       const pcbName = `${projectName}/${pcb.name}${pcb.version ? `(${pcb.version})` : ""}`;
       for (const item of pcb.items) {
         if (!map.has(item.componentId)) {
@@ -59,7 +61,7 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
       }
     }
     return map;
-  }, [pcbs, projectMap]);
+  }, [lang, pcbs, projectMap]);
 
   const filtered = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -94,41 +96,111 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
           return priceA - priceB;
         }
 
-        return a.model.localeCompare(b.model, "zh-CN");
+        return a.model.localeCompare(b.model, lang === "en" ? "en-US" : "zh-CN");
       });
-  }, [components, keyword, sortBy, typeFilter, typeMap, warningOnly]);
+  }, [components, keyword, lang, sortBy, typeFilter, typeMap, warningOnly]);
 
   const warningCount = components.filter(isWarning).length;
   const isHome = entryMode === "home";
+  const text =
+    lang === "en"
+      ? {
+          homeTitle: "Components Home",
+          listTitle: "Components List",
+          subtitle: "Search, filter, and locate low-stock parts quickly, then jump to create/edit pages.",
+          addComponent: "Add Component",
+          addType: "Add Type",
+          pcb: "PCB",
+          settings: "Storage Settings",
+          stores: "Store Reviews",
+          exportJson: "Export JSON",
+          exportExcel: "Export Excel",
+          filterTitle: "Search & Filters",
+          keywordPlaceholder: "Keywords: model / aux info / note / type",
+          allTypes: "All Types",
+          sortUpdated: "Sort by Updated Time",
+          sortQuantity: "Sort by Quantity",
+          sortPrice: "Sort by Lowest Price",
+          sortModel: "Sort by Model",
+          warningOnly: "Show low-stock only",
+          summary: `Total ${filtered.length} items, ${warningCount} in low stock.`,
+          unknownType: "Unknown Type",
+          lowStock: "Low Stock",
+          edit: "Edit",
+          auxInfo: "Aux Info",
+          note: "Note",
+          totalQuantity: "Total Quantity",
+          warningThreshold: "Warning Threshold",
+          lowestPrice: "Lowest Price",
+          updatedAt: "Updated At",
+          linkedPcbCount: "Linked PCB Count",
+          pcbDemand: "PCB Total Demand",
+          linkedPcb: "Linked PCB",
+          noMatch: "No components match current filters.",
+        }
+      : {
+          homeTitle: "元器件首页",
+          listTitle: "元器件列表",
+          subtitle: "支持关键词搜索、筛选和库存预警定位，并可直接跳转到新增与编辑。",
+          addComponent: "新增元器件",
+          addType: "新增类型",
+          pcb: "PCB管理",
+          settings: "存储设置",
+          stores: "店铺评价",
+          exportJson: "导出 JSON",
+          exportExcel: "导出 Excel",
+          filterTitle: "搜索与筛选",
+          keywordPlaceholder: "关键词：型号/辅助信息/备注/类型",
+          allTypes: "全部类型",
+          sortUpdated: "按更新时间",
+          sortQuantity: "按总数目",
+          sortPrice: "按最低价格",
+          sortModel: "按型号",
+          warningOnly: "仅显示库存预警",
+          summary: `当前共 ${filtered.length} 条，库存预警 ${warningCount} 条。`,
+          unknownType: "未知类型",
+          lowStock: "库存预警",
+          edit: "编辑",
+          auxInfo: "辅助信息",
+          note: "备注",
+          totalQuantity: "总数目",
+          warningThreshold: "预警阈值",
+          lowestPrice: "最低价格",
+          updatedAt: "更新时间",
+          linkedPcbCount: "关联 PCB 数",
+          pcbDemand: "PCB 需求总量",
+          linkedPcb: "关联 PCB",
+          noMatch: "没有符合条件的元器件。",
+        };
 
   return (
     <>
       <section className="hero-card">
         <div>
-          <h1>{isHome ? "元器件首页" : "元器件列表"}</h1>
-          <p>支持关键词搜索、筛选和库存预警定位，并可直接跳转到新增与编辑。</p>
+          <h1>{isHome ? text.homeTitle : text.listTitle}</h1>
+          <p>{text.subtitle}</p>
         </div>
         <div className="toolbar">
           <Link href="/components/manage?mode=new" className="btn-primary btn-link home-quick-action home-quick-action-primary">
-            新增元器件
+            {text.addComponent}
           </Link>
           <Link href="/types" className="btn-secondary btn-link home-quick-action">
-            新增类型
+            {text.addType}
           </Link>
           <Link href="/pcbs" className="btn-secondary btn-link home-quick-action">
-            PCB管理
+            {text.pcb}
           </Link>
           <Link href="/settings" className="btn-secondary btn-link home-quick-action">
-            存储设置
+            {text.settings}
           </Link>
           <Link href="/stores" className="btn-secondary btn-link home-quick-action">
-            店铺评价
+            {text.stores}
           </Link>
           <button type="button" className="btn-secondary" onClick={() => triggerDownload("/api/export/json")}>
-            导出 JSON
+            {text.exportJson}
           </button>
           <button type="button" className="btn-secondary" onClick={() => triggerDownload("/api/export/excel")}>
-            导出 Excel
+            {text.exportExcel}
           </button>
         </div>
       </section>
@@ -136,15 +208,15 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
       {error ? <p className="error-banner">{error}</p> : null}
 
       <section className="panel">
-        <h2>搜索与筛选</h2>
+        <h2>{text.filterTitle}</h2>
         <div className="filter-grid">
           <input
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="关键词：型号/辅助信息/备注/类型"
+            placeholder={text.keywordPlaceholder}
           />
           <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-            <option value="all">全部类型</option>
+            <option value="all">{text.allTypes}</option>
             {types.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -152,10 +224,10 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
             ))}
           </select>
           <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-            <option value="updated">按更新时间</option>
-            <option value="quantity">按总数目</option>
-            <option value="price">按最低价格</option>
-            <option value="model">按型号</option>
+            <option value="updated">{text.sortUpdated}</option>
+            <option value="quantity">{text.sortQuantity}</option>
+            <option value="price">{text.sortPrice}</option>
+            <option value="model">{text.sortModel}</option>
           </select>
           <label className="checkbox-line">
             <input
@@ -163,10 +235,10 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
               checked={warningOnly}
               onChange={(event) => setWarningOnly(event.target.checked)}
             />
-            仅显示库存预警
+            {text.warningOnly}
           </label>
         </div>
-        <p className="muted">当前共 {filtered.length} 条，库存预警 {warningCount} 条。</p>
+        <p className="muted">{text.summary}</p>
       </section>
 
       <section className="component-list">
@@ -175,58 +247,58 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
             <header>
               <div>
                 <h3>{item.model}</h3>
-                <p>{typeMap.get(item.typeId) ?? "未知类型"}</p>
+                <p>{typeMap.get(item.typeId) ?? text.unknownType}</p>
               </div>
               <div className="inline-actions">
-                {isWarning(item) ? <span className="badge-warning">库存预警</span> : null}
+                {isWarning(item) ? <span className="badge-warning">{text.lowStock}</span> : null}
                 <Link href={`/components/manage?mode=edit&componentId=${item.id}`} className="btn-ghost btn-link">
-                  编辑
+                  {text.edit}
                 </Link>
               </div>
             </header>
 
             <div className="meta-grid">
               <div>
-                <span>辅助信息</span>
+                <span>{text.auxInfo}</span>
                 <p>{item.auxInfo || "-"}</p>
               </div>
               <div>
-                <span>备注</span>
+                <span>{text.note}</span>
                 <p>{item.note || "-"}</p>
               </div>
               <div>
-                <span>总数目</span>
+                <span>{text.totalQuantity}</span>
                 <p>{item.totalQuantity}</p>
               </div>
               <div>
-                <span>预警阈值</span>
+                <span>{text.warningThreshold}</span>
                 <p>{item.warningThreshold}</p>
               </div>
               <div>
-                <span>最低价格</span>
-                <p>{item.lowestPrice === null ? "-" : `¥${item.lowestPrice.toFixed(2)}/个`}</p>
+                <span>{text.lowestPrice}</span>
+                <p>{item.lowestPrice === null ? "-" : `¥${item.lowestPrice.toFixed(2)}${lang === "en" ? "/unit" : "/个"}`}</p>
               </div>
               <div>
-                <span>更新时间</span>
+                <span>{text.updatedAt}</span>
                 <p>{formatTime(item.updatedAt)}</p>
               </div>
               <div>
-                <span>关联 PCB 数</span>
+                <span>{text.linkedPcbCount}</span>
                 <p>{pcbUsageMap.get(item.id)?.pcbNames.size ?? 0}</p>
               </div>
               <div>
-                <span>PCB 需求总量</span>
+                <span>{text.pcbDemand}</span>
                 <p>{pcbUsageMap.get(item.id)?.totalRequired ?? 0}</p>
               </div>
               <div>
-                <span>关联 PCB</span>
-                <p>{Array.from(pcbUsageMap.get(item.id)?.pcbNames ?? []).join("，") || "-"}</p>
+                <span>{text.linkedPcb}</span>
+                <p>{Array.from(pcbUsageMap.get(item.id)?.pcbNames ?? []).join(lang === "en" ? ", " : "，") || "-"}</p>
               </div>
             </div>
           </article>
         ))}
 
-        {!filtered.length ? <article className="panel muted">没有符合条件的元器件。</article> : null}
+        {!filtered.length ? <article className="panel muted">{text.noMatch}</article> : null}
       </section>
     </>
   );
