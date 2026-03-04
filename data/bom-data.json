@@ -18,11 +18,11 @@
     },
     {
       "id": "61e74a03-ec44-4b21-88c1-f9057a9882f4",
-      "name": "二极管",
+      "name": "二极管/稳压二极管",
       "primaryName": "二极管",
-      "secondaryName": "",
+      "secondaryName": "稳压二极管",
       "createdAt": "2026-03-03T11:25:46.475Z",
-      "updatedAt": "2026-03-03T11:25:46.475Z"
+      "updatedAt": "2026-03-04T04:21:05.909Z"
     },
     {
       "id": "d41cc6fb-4e47-4eac-978a-0cbfd1264a90",
@@ -31,6 +31,14 @@
       "secondaryName": "",
       "createdAt": "2026-03-03T11:25:49.924Z",
       "updatedAt": "2026-03-03T11:25:49.924Z"
+    },
+    {
+      "id": "39fdf2d4-82e9-4570-b08e-89eac8912eb0",
+      "name": "二极管/肖特基二极管",
+      "primaryName": "二极管",
+      "secondaryName": "肖特基二极管",
+      "createdAt": "2026-03-04T04:21:16.365Z",
+      "updatedAt": "2026-03-04T04:21:16.365Z"
     }
   ],
   "components": [],

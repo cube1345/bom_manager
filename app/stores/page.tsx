@@ -114,68 +114,150 @@ export default function StoresPage() {
         <article className="panel">
           <h2>{editingId ? "编辑店铺" : "新增店铺"}</h2>
           <form className="stack-form" onSubmit={submitStore}>
-            <input
-              value={form.platform}
-              onChange={(event) => setForm((prev) => ({ ...prev, platform: event.target.value }))}
-              placeholder="平台（例如：淘宝 / 立创商城）"
-              required
-            />
-            <input
-              value={form.shopName}
-              onChange={(event) => setForm((prev) => ({ ...prev, shopName: event.target.value }))}
-              placeholder="店铺名称"
-              required
-            />
-            <input
-              type="number"
-              min="0"
-              max="5"
-              step="0.1"
-              value={form.qualityScore}
-              onChange={(event) => setForm((prev) => ({ ...prev, qualityScore: event.target.value }))}
-              placeholder="质量评分（0-5）"
-              required
-            />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.shippingFee}
-              onChange={(event) => setForm((prev) => ({ ...prev, shippingFee: event.target.value }))}
-              placeholder="平均邮费（元）"
-              required
-            />
-            <input
-              type="number"
-              min="0"
-              max="5"
-              step="0.1"
-              value={form.priceScore}
-              onChange={(event) => setForm((prev) => ({ ...prev, priceScore: event.target.value }))}
-              placeholder="价格评分（0-5）"
-              required
-            />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.referencePrice}
-              onChange={(event) => setForm((prev) => ({ ...prev, referencePrice: event.target.value }))}
-              placeholder="参考价格（元/个）"
-              required
-            />
-            <textarea
-              rows={2}
-              value={form.mainProducts}
-              onChange={(event) => setForm((prev) => ({ ...prev, mainProducts: event.target.value }))}
-              placeholder="主卖品（例如：贴片电阻、电容）"
-            />
-            <textarea
-              rows={2}
-              value={form.note}
-              onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
-              placeholder="备注"
-            />
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-platform">
+                  平台：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="store-platform"
+                value={form.platform}
+                onChange={(event) => setForm((prev) => ({ ...prev, platform: event.target.value }))}
+                placeholder="例如：淘宝 / 立创商城"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-name">
+                  店铺名称：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="store-name"
+                value={form.shopName}
+                onChange={(event) => setForm((prev) => ({ ...prev, shopName: event.target.value }))}
+                placeholder="请输入店铺名称"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-quality-score">
+                  质量评分（0-5）：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="store-quality-score"
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={form.qualityScore}
+                onChange={(event) => setForm((prev) => ({ ...prev, qualityScore: event.target.value }))}
+                placeholder="例如：4.8"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-shipping-fee">
+                  平均邮费（元）：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="store-shipping-fee"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.shippingFee}
+                onChange={(event) => setForm((prev) => ({ ...prev, shippingFee: event.target.value }))}
+                placeholder="例如：6.50"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-price-score">
+                  价格评分（0-5）：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="store-price-score"
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={form.priceScore}
+                onChange={(event) => setForm((prev) => ({ ...prev, priceScore: event.target.value }))}
+                placeholder="例如：4.6"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-reference-price">
+                  参考价格（元/个）：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="store-reference-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.referencePrice}
+                onChange={(event) => setForm((prev) => ({ ...prev, referencePrice: event.target.value }))}
+                placeholder="例如：0.15"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-main-products">
+                  主卖品：
+                </label>
+              </div>
+              <textarea
+                id="store-main-products"
+                rows={2}
+                value={form.mainProducts}
+                onChange={(event) => setForm((prev) => ({ ...prev, mainProducts: event.target.value }))}
+                placeholder="例如：贴片电阻、电容"
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="store-note">
+                  备注：
+                </label>
+              </div>
+              <textarea
+                id="store-note"
+                rows={2}
+                value={form.note}
+                onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
+                placeholder="可填写补充信息"
+              />
+            </div>
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
                 {editingId ? "更新" : "新增"}

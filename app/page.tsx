@@ -1,4 +1,4 @@
-import ComponentsPage from "./components/page";
+import ComponentsPage from "@/components/components-page";
 
 export default function Home() {
   return <ComponentsPage entryMode="home" />;

@@ -251,18 +251,37 @@ export default function PcbsPage() {
         <article className="panel">
           <h2>{editingProjectId ? "编辑项目" : "新增项目"}</h2>
           <form className="stack-form" onSubmit={submitProject}>
-            <input
-              value={projectForm.name}
-              onChange={(event) => setProjectForm((prev) => ({ ...prev, name: event.target.value }))}
-              placeholder="项目名称"
-              required
-            />
-            <textarea
-              value={projectForm.note}
-              onChange={(event) => setProjectForm((prev) => ({ ...prev, note: event.target.value }))}
-              placeholder="项目备注"
-              rows={2}
-            />
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="project-name">
+                  项目名称：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="project-name"
+                value={projectForm.name}
+                onChange={(event) => setProjectForm((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="例如：温控主板项目"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="project-note">
+                  项目备注：
+                </label>
+              </div>
+              <textarea
+                id="project-note"
+                value={projectForm.note}
+                onChange={(event) => setProjectForm((prev) => ({ ...prev, note: event.target.value }))}
+                placeholder="可填写项目说明"
+                rows={2}
+              />
+            </div>
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
                 {editingProjectId ? "更新项目" : "创建项目"}
@@ -282,44 +301,93 @@ export default function PcbsPage() {
         <article className="panel">
           <h2>{editingPcbId ? "编辑 PCB" : "新增 PCB"}</h2>
           <form className="stack-form" onSubmit={submitPcb}>
-            <select
-              value={pcbForm.projectId}
-              onChange={(event) => setPcbForm((prev) => ({ ...prev, projectId: event.target.value }))}
-              required
-            >
-              <option value="">请选择项目</option>
-              {projects.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <input
-              value={pcbForm.name}
-              onChange={(event) => setPcbForm((prev) => ({ ...prev, name: event.target.value }))}
-              placeholder="PCB 名称"
-              required
-            />
-            <input
-              value={pcbForm.version}
-              onChange={(event) => setPcbForm((prev) => ({ ...prev, version: event.target.value }))}
-              placeholder="版本号（可选）"
-            />
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={pcbForm.boardQuantity}
-              onChange={(event) => setPcbForm((prev) => ({ ...prev, boardQuantity: event.target.value }))}
-              placeholder="该项目使用此 PCB 数量"
-              required
-            />
-            <textarea
-              value={pcbForm.note}
-              onChange={(event) => setPcbForm((prev) => ({ ...prev, note: event.target.value }))}
-              placeholder="PCB 备注"
-              rows={2}
-            />
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="pcb-project-id">
+                  所属项目：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <select
+                id="pcb-project-id"
+                value={pcbForm.projectId}
+                onChange={(event) => setPcbForm((prev) => ({ ...prev, projectId: event.target.value }))}
+                required
+              >
+                <option value="">请选择项目</option>
+                {projects.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="pcb-name">
+                  PCB 名称：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="pcb-name"
+                value={pcbForm.name}
+                onChange={(event) => setPcbForm((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="例如：主控板"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="pcb-version">
+                  版本号：
+                </label>
+              </div>
+              <input
+                id="pcb-version"
+                value={pcbForm.version}
+                onChange={(event) => setPcbForm((prev) => ({ ...prev, version: event.target.value }))}
+                placeholder="可选，例如：v1.2"
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="pcb-board-quantity">
+                  项目用板数量：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="pcb-board-quantity"
+                type="number"
+                min="1"
+                step="1"
+                value={pcbForm.boardQuantity}
+                onChange={(event) => setPcbForm((prev) => ({ ...prev, boardQuantity: event.target.value }))}
+                placeholder="例如：10"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="pcb-note">
+                  PCB 备注：
+                </label>
+              </div>
+              <textarea
+                id="pcb-note"
+                value={pcbForm.note}
+                onChange={(event) => setPcbForm((prev) => ({ ...prev, note: event.target.value }))}
+                placeholder="可填写版本差异说明"
+                rows={2}
+              />
+            </div>
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
                 {editingPcbId ? "更新 PCB" : "创建 PCB"}
@@ -445,27 +513,49 @@ export default function PcbsPage() {
           <div className="modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <h3>{editingBomId ? "编辑 BOM 明细" : `新增 BOM 明细 - ${activePcb.name}`}</h3>
             <form className="stack-form" onSubmit={submitBom}>
-              <select
-                value={bomForm.componentId}
-                onChange={(event) => setBomForm((prev) => ({ ...prev, componentId: event.target.value }))}
-                required
-              >
-                <option value="">请选择元器件</option>
-                {components.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {typeMap.get(item.typeId) ?? "未知类型"} / {item.model}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={bomForm.quantityPerBoard}
-                onChange={(event) => setBomForm((prev) => ({ ...prev, quantityPerBoard: event.target.value }))}
-                placeholder="单板需求数量"
-                required
-              />
+              <div className="form-field">
+                <div className="field-head">
+                  <label className="field-label" htmlFor="bom-component-id">
+                    元器件：
+                  </label>
+                  <span className="field-required" aria-hidden="true">
+                    *
+                  </span>
+                </div>
+                <select
+                  id="bom-component-id"
+                  value={bomForm.componentId}
+                  onChange={(event) => setBomForm((prev) => ({ ...prev, componentId: event.target.value }))}
+                  required
+                >
+                  <option value="">请选择元器件</option>
+                  {components.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {typeMap.get(item.typeId) ?? "未知类型"} / {item.model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <div className="field-head">
+                  <label className="field-label" htmlFor="bom-quantity-per-board">
+                    单板需求数量：
+                  </label>
+                  <span className="field-required" aria-hidden="true">
+                    *
+                  </span>
+                </div>
+                <input
+                  id="bom-quantity-per-board"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={bomForm.quantityPerBoard}
+                  onChange={(event) => setBomForm((prev) => ({ ...prev, quantityPerBoard: event.target.value }))}
+                  placeholder="例如：2"
+                  required
+                />
+              </div>
               <div className="record-table-wrap">
                 <table>
                   <thead>

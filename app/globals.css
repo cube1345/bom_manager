@@ -15,6 +15,21 @@
   --warning-line: #fde68a;
 }
 
+:root[data-theme="dark"] {
+  --bg: #0b1220;
+  --bg-elevated: #0f172a;
+  --ink: #e5e7eb;
+  --muted: #94a3b8;
+  --line: #1f2937;
+  --line-strong: #334155;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --danger: #f87171;
+  --danger-bg: #2a1115;
+  --warning-bg: #2a2308;
+  --warning-line: #7c5f12;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -93,6 +108,10 @@ a {
 .nav-link:hover {
   background: #f2f4f7;
   border-color: var(--line);
+}
+
+.nav-link-home {
+  margin-left: auto;
 }
 
 .nav-link.active {
@@ -189,6 +208,32 @@ a {
   gap: 10px;
 }
 
+.form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.field-required {
+  color: #dc2626;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 input,
 textarea,
 select {
@@ -279,7 +324,18 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px;
-  background: #fff;
+  background: var(--bg-elevated);
+}
+
+.type-group {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+}
+
+.type-group h3 {
+  margin: 0 0 8px;
 }
 
 .type-item {
@@ -455,7 +511,7 @@ th {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: 8px;
-  align-items: center;
+  align-items: end;
 }
 
 .modal-overlay {
@@ -472,6 +528,67 @@ th {
   max-width: 520px;
   width: 100%;
   padding: 16px;
+}
+
+:root[data-theme="dark"] body {
+  background: radial-gradient(circle at 0% 0%, #182235, var(--bg) 45%, #060b16 100%);
+}
+
+:root[data-theme="dark"] .top-nav {
+  background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+}
+
+:root[data-theme="dark"] .nav-link {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .nav-link:hover {
+  background: #1e293b;
+}
+
+:root[data-theme="dark"] .nav-link.active {
+  color: #dbeafe;
+  background: #1e3a8a;
+  border-color: #2563eb;
+}
+
+:root[data-theme="dark"] .btn-secondary,
+:root[data-theme="dark"] .btn-ghost {
+  background: #0b1220;
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .btn-danger {
+  background: #2a1115;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+:root[data-theme="dark"] .type-group {
+  background: #0a1326;
+  border-color: #22314b;
+}
+
+:root[data-theme="dark"] .type-item,
+:root[data-theme="dark"] .component-card {
+  background: #0b1220;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .type-item strong,
+:root[data-theme="dark"] .component-card h3 {
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .type-item p,
+:root[data-theme="dark"] .muted {
+  color: #93a4bd;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select {
+  background: #0b1220;
 }
 
 @media (max-width: 940px) {

@@ -628,47 +628,96 @@ function ManageComponentsPageInner() {
         <article className="panel">
           <h2>{editingComponentId ? "编辑元器件" : "新增元器件"}</h2>
           <form className="stack-form" onSubmit={submitComponent}>
-            <select
-              value={componentForm.typeId}
-              onChange={(event) => setComponentForm((prev) => ({ ...prev, typeId: event.target.value }))}
-              required
-            >
-              <option value="">请选择类型</option>
-              {types.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <input
-              value={componentForm.model}
-              onChange={(event) => setComponentForm((prev) => ({ ...prev, model: event.target.value }))}
-              placeholder="型号"
-              required
-            />
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={componentForm.warningThreshold}
-              onChange={(event) =>
-                setComponentForm((prev) => ({ ...prev, warningThreshold: event.target.value }))
-              }
-              placeholder="库存预警阈值"
-              required
-            />
-            <textarea
-              value={componentForm.auxInfo}
-              onChange={(event) => setComponentForm((prev) => ({ ...prev, auxInfo: event.target.value }))}
-              placeholder="辅助信息"
-              rows={2}
-            />
-            <textarea
-              value={componentForm.note}
-              onChange={(event) => setComponentForm((prev) => ({ ...prev, note: event.target.value }))}
-              placeholder="备注"
-              rows={2}
-            />
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="component-type-id">
+                  类型：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <select
+                id="component-type-id"
+                value={componentForm.typeId}
+                onChange={(event) => setComponentForm((prev) => ({ ...prev, typeId: event.target.value }))}
+                required
+              >
+                <option value="">请选择类型</option>
+                {types.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="component-model">
+                  型号：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="component-model"
+                value={componentForm.model}
+                onChange={(event) => setComponentForm((prev) => ({ ...prev, model: event.target.value }))}
+                placeholder="请输入型号"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="component-warning-threshold">
+                  库存预警阈值：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="component-warning-threshold"
+                type="number"
+                min="0"
+                step="1"
+                value={componentForm.warningThreshold}
+                onChange={(event) =>
+                  setComponentForm((prev) => ({ ...prev, warningThreshold: event.target.value }))
+                }
+                placeholder="例如：50"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="component-aux-info">
+                  辅助信息：
+                </label>
+              </div>
+              <textarea
+                id="component-aux-info"
+                value={componentForm.auxInfo}
+                onChange={(event) => setComponentForm((prev) => ({ ...prev, auxInfo: event.target.value }))}
+                placeholder="可填写规格参数"
+                rows={2}
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="component-note">
+                  备注：
+                </label>
+              </div>
+              <textarea
+                id="component-note"
+                value={componentForm.note}
+                onChange={(event) => setComponentForm((prev) => ({ ...prev, note: event.target.value }))}
+                placeholder="可填写补充信息"
+                rows={2}
+              />
+            </div>
             <div className="inline-actions">
               <button type="submit" className="btn-primary">
                 {editingComponentId ? "更新" : "创建"}
@@ -691,17 +740,36 @@ function ManageComponentsPageInner() {
           <hr className="split-line" />
           <h3>快速新增类型</h3>
           <form className="inline-create-form" onSubmit={createTypeInline}>
-            <input
-              value={newTypePrimaryName}
-              onChange={(event) => setNewTypePrimaryName(event.target.value)}
-              placeholder="一级类型，例如：连接器"
-              required
-            />
-            <input
-              value={newTypeSecondaryName}
-              onChange={(event) => setNewTypeSecondaryName(event.target.value)}
-              placeholder="二级类型（可选）"
-            />
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="quick-type-primary">
+                  一级类型：
+                </label>
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </div>
+              <input
+                id="quick-type-primary"
+                value={newTypePrimaryName}
+                onChange={(event) => setNewTypePrimaryName(event.target.value)}
+                placeholder="例如：连接器"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <div className="field-head">
+                <label className="field-label" htmlFor="quick-type-secondary">
+                  二级类型：
+                </label>
+              </div>
+              <input
+                id="quick-type-secondary"
+                value={newTypeSecondaryName}
+                onChange={(event) => setNewTypeSecondaryName(event.target.value)}
+                placeholder="可选，例如：排针排母"
+              />
+            </div>
             <button type="submit" className="btn-secondary">
               新增类型
             </button>
@@ -915,56 +983,108 @@ function ManageComponentsPageInner() {
           <div className="modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <h3>{editingRecordId ? "编辑采购记录" : `新增采购记录 - ${activeComponent.model}`}</h3>
             <form className="stack-form" onSubmit={submitRecord}>
-              <select
-                value={recordForm.storeId}
-                onChange={(event) => {
-                  const selectedStoreId = event.target.value;
-                  const selectedStore = selectedStoreId ? storeMap.get(selectedStoreId) : undefined;
-                  setRecordForm((prev) => ({
-                    ...prev,
-                    storeId: selectedStoreId,
-                    platform: selectedStore?.platform ?? prev.platform,
-                    pricePerUnit: selectedStore ? String(selectedStore.referencePrice) : prev.pricePerUnit,
-                  }));
-                }}
-              >
-                <option value="">不关联店铺</option>
-                {stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.platform} / {store.shopName}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={recordForm.platform}
-                onChange={(event) => setRecordForm((prev) => ({ ...prev, platform: event.target.value }))}
-                placeholder="购买平台"
-                required
-              />
-              <input
-                value={recordForm.link}
-                onChange={(event) => setRecordForm((prev) => ({ ...prev, link: event.target.value }))}
-                placeholder="购买链接"
-                required
-              />
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={recordForm.quantity}
-                onChange={(event) => setRecordForm((prev) => ({ ...prev, quantity: event.target.value }))}
-                placeholder="数目"
-                required
-              />
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={recordForm.pricePerUnit}
-                onChange={(event) => setRecordForm((prev) => ({ ...prev, pricePerUnit: event.target.value }))}
-                placeholder="价格（元/个）"
-                required
-              />
+              <div className="form-field">
+                <div className="field-head">
+                  <label className="field-label" htmlFor="record-store-id">
+                    关联店铺：
+                  </label>
+                </div>
+                <select
+                  id="record-store-id"
+                  value={recordForm.storeId}
+                  onChange={(event) => {
+                    const selectedStoreId = event.target.value;
+                    const selectedStore = selectedStoreId ? storeMap.get(selectedStoreId) : undefined;
+                    setRecordForm((prev) => ({
+                      ...prev,
+                      storeId: selectedStoreId,
+                      platform: selectedStore?.platform ?? prev.platform,
+                      pricePerUnit: selectedStore ? String(selectedStore.referencePrice) : prev.pricePerUnit,
+                    }));
+                  }}
+                >
+                  <option value="">不关联店铺</option>
+                  {stores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.platform} / {store.shopName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <div className="field-head">
+                  <label className="field-label" htmlFor="record-platform">
+                    购买平台：
+                  </label>
+                  <span className="field-required" aria-hidden="true">
+                    *
+                  </span>
+                </div>
+                <input
+                  id="record-platform"
+                  value={recordForm.platform}
+                  onChange={(event) => setRecordForm((prev) => ({ ...prev, platform: event.target.value }))}
+                  placeholder="例如：淘宝"
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <div className="field-head">
+                  <label className="field-label" htmlFor="record-link">
+                    购买链接：
+                  </label>
+                  <span className="field-required" aria-hidden="true">
+                    *
+                  </span>
+                </div>
+                <input
+                  id="record-link"
+                  value={recordForm.link}
+                  onChange={(event) => setRecordForm((prev) => ({ ...prev, link: event.target.value }))}
+                  placeholder="请输入采购链接"
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <div className="field-head">
+                  <label className="field-label" htmlFor="record-quantity">
+                    采购数量：
+                  </label>
+                  <span className="field-required" aria-hidden="true">
+                    *
+                  </span>
+                </div>
+                <input
+                  id="record-quantity"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={recordForm.quantity}
+                  onChange={(event) => setRecordForm((prev) => ({ ...prev, quantity: event.target.value }))}
+                  placeholder="例如：100"
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <div className="field-head">
+                  <label className="field-label" htmlFor="record-price-per-unit">
+                    价格（元/个）：
+                  </label>
+                  <span className="field-required" aria-hidden="true">
+                    *
+                  </span>
+                </div>
+                <input
+                  id="record-price-per-unit"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={recordForm.pricePerUnit}
+                  onChange={(event) => setRecordForm((prev) => ({ ...prev, pricePerUnit: event.target.value }))}
+                  placeholder="例如：0.25"
+                  required
+                />
+              </div>
               {recordForm.storeId ? (
                 <p className="muted">
                   已根据店铺自动回填平台与参考价格，可手动调整。
