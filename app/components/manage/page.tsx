@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
 import type { ComponentItem, ComponentType, PurchaseRecord, StoreReview } from "@/lib/types";
@@ -273,6 +273,7 @@ function buildImportItemsFromRows(rows: Array<Record<string, string>>, mapping: 
 
 function ManageComponentsPageInner() {
   const lang = useUiLang();
+  const sortLocale = lang === "en" ? "en-US" : "zh-Hans-CN";
   const t = (zh: string, en: string) => tr(lang, zh, en);
   const searchParams = useSearchParams();
   const [types, setTypes] = useState<ComponentType[]>([]);
@@ -297,6 +298,10 @@ function ManageComponentsPageInner() {
   const [importRows, setImportRows] = useState<Array<Record<string, string>>>([]);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({ ...emptyMapping });
   const [pendingJsonItems, setPendingJsonItems] = useState<ImportItem[]>([]);
+  const sortedImportHeaders = useMemo(
+    () => [...importHeaders].sort((a, b) => a.localeCompare(b, sortLocale)),
+    [importHeaders, sortLocale],
+  );
   const importFieldOptions = useMemo<Array<{ key: ImportField; label: string; required?: boolean }>>(
     () => [
       { key: "typeName", label: tr(lang, "类型", "Type"), required: true },
@@ -312,32 +317,48 @@ function ManageComponentsPageInner() {
     [lang],
   );
 
+  const sortedTypes = useMemo(
+    () => [...types].sort((a, b) => a.name.localeCompare(b.name, sortLocale)),
+    [sortLocale, types],
+  );
+  const sortedStores = useMemo(
+    () =>
+      [...stores].sort((a, b) =>
+        `${a.platform} ${a.shopName}`.localeCompare(`${b.platform} ${b.shopName}`, sortLocale),
+      ),
+    [sortLocale, stores],
+  );
+  const sortedComponents = useMemo(
+    () => [...components].sort((a, b) => a.model.localeCompare(b.model, sortLocale)),
+    [components, sortLocale],
+  );
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
   const storeMap = useMemo(() => new Map(stores.map((item) => [item.id, item])), [stores]);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setError("");
     const [typesData, componentsData, storesData] = await Promise.all([
       requestJson<ComponentType[]>("/api/types"),
       requestJson<ComponentItem[]>("/api/components"),
       requestJson<StoreReview[]>("/api/stores"),
     ]);
+    const firstTypeId = [...typesData].sort((a, b) => a.name.localeCompare(b.name, sortLocale))[0]?.id ?? "";
 
     setTypes(typesData);
     setComponents(componentsData);
     setStores(storesData);
     setComponentForm((prev) => ({
       ...prev,
-      typeId: prev.typeId || typesData[0]?.id || "",
+      typeId: prev.typeId || firstTypeId,
     }));
     setLoaded(true);
-  }
+  }, [sortLocale]);
 
   useEffect(() => {
     void loadData().catch((err) => {
       setError(err instanceof Error ? err.message : tr(lang, "加载失败", "Failed to load data"));
     });
-  }, [lang]);
+  }, [lang, loadData]);
 
   async function submitComponent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -363,7 +384,7 @@ function ManageComponentsPageInner() {
       }
 
       setEditingComponentId(null);
-      setComponentForm({ ...initialComponentForm, typeId: types[0]?.id ?? "", warningThreshold: "0" });
+      setComponentForm({ ...initialComponentForm, typeId: sortedTypes[0]?.id ?? "", warningThreshold: "0" });
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("保存元器件失败", "Failed to save component"));
@@ -398,7 +419,7 @@ function ManageComponentsPageInner() {
       setEditingComponentId(null);
       setComponentForm({
         ...initialComponentForm,
-        typeId: types[0]?.id ?? "",
+        typeId: sortedTypes[0]?.id ?? "",
         warningThreshold: "0",
       });
       setAppliedRouteKey(routeKey);
@@ -414,7 +435,7 @@ function ManageComponentsPageInner() {
       }
       setAppliedRouteKey(routeKey);
     }
-  }, [appliedRouteKey, components, lang, loaded, searchParams, types]);
+  }, [appliedRouteKey, components, lang, loaded, searchParams, sortedTypes]);
 
   async function createTypeInline(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -657,19 +678,19 @@ function ManageComponentsPageInner() {
                   *
                 </span>
               </div>
-              <select
-                id="component-type-id"
-                value={componentForm.typeId}
-                onChange={(event) => setComponentForm((prev) => ({ ...prev, typeId: event.target.value }))}
-                required
-              >
-                <option value="">{t("请选择类型", "Select type")}</option>
-                {types.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+                <select
+                  id="component-type-id"
+                  value={componentForm.typeId}
+                  onChange={(event) => setComponentForm((prev) => ({ ...prev, typeId: event.target.value }))}
+                  required
+                >
+                  <option value="">{t("请选择类型", "Select type")}</option>
+                  {sortedTypes.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
             </div>
             <div className="form-field">
               <div className="field-head">
@@ -748,7 +769,7 @@ function ManageComponentsPageInner() {
                   className="btn-ghost"
                   onClick={() => {
                     setEditingComponentId(null);
-                    setComponentForm({ ...initialComponentForm, typeId: types[0]?.id ?? "" });
+                    setComponentForm({ ...initialComponentForm, typeId: sortedTypes[0]?.id ?? "" });
                   }}
                 >
                   {t("取消", "Cancel")}
@@ -834,7 +855,7 @@ function ManageComponentsPageInner() {
                                 }
                               >
                                 <option value="">{t("不映射", "Do not map")}</option>
-                                {importHeaders.map((header) => (
+                                {sortedImportHeaders.map((header) => (
                                   <option key={`${field.key}-${header}`} value={header}>
                                     {header}
                                   </option>
@@ -887,8 +908,8 @@ function ManageComponentsPageInner() {
           <span>{lang === "en" ? `${components.length} components` : `${components.length} 个元器件`}</span>
         </div>
 
-        <div className="component-list">
-          {components.map((item) => (
+        <div className="component-list scroll-list">
+          {sortedComponents.map((item) => (
             <article className="component-card" key={item.id}>
               <header>
                 <div>
@@ -945,7 +966,9 @@ function ManageComponentsPageInner() {
                     </tr>
                   </thead>
                   <tbody>
-                    {item.records.map((record) => (
+                    {[...item.records]
+                      .sort((a, b) => a.platform.localeCompare(b.platform, sortLocale))
+                      .map((record) => (
                       <tr key={record.id}>
                         <td>
                           {record.storeId
@@ -980,7 +1003,7 @@ function ManageComponentsPageInner() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      ))}
                     {!item.records.length ? (
                       <tr>
                         <td className="muted text-center" colSpan={7}>
@@ -1024,7 +1047,7 @@ function ManageComponentsPageInner() {
                   }}
                 >
                   <option value="">{t("不关联店铺", "No linked store")}</option>
-                  {stores.map((store) => (
+                  {sortedStores.map((store) => (
                     <option key={store.id} value={store.id}>
                       {store.platform} / {store.shopName}
                     </option>

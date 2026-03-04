@@ -23,8 +23,8 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
   const [keyword, setKeyword] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [warningOnly, setWarningOnly] = useState(false);
-  const [sortBy, setSortBy] = useState("updated");
   const [error, setError] = useState("");
+  const sortLocale = lang === "en" ? "en-US" : "zh-Hans-CN";
 
   useEffect(() => {
     void Promise.all([
@@ -46,6 +46,10 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
   const projectMap = useMemo(() => new Map(projects.map((item) => [item.id, item.name])), [projects]);
+  const sortedTypes = useMemo(
+    () => [...types].sort((a, b) => a.name.localeCompare(b.name, sortLocale)),
+    [sortLocale, types],
+  );
   const pcbUsageMap = useMemo(() => {
     const map = new Map<string, { totalRequired: number; pcbNames: Set<string> }>();
     for (const pcb of pcbs) {
@@ -81,24 +85,8 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
 
         return hitKeyword && hitType && hitWarning;
       })
-      .sort((a, b) => {
-        if (sortBy === "updated") {
-          return +new Date(b.updatedAt) - +new Date(a.updatedAt);
-        }
-
-        if (sortBy === "quantity") {
-          return b.totalQuantity - a.totalQuantity;
-        }
-
-        if (sortBy === "price") {
-          const priceA = a.lowestPrice ?? Number.POSITIVE_INFINITY;
-          const priceB = b.lowestPrice ?? Number.POSITIVE_INFINITY;
-          return priceA - priceB;
-        }
-
-        return a.model.localeCompare(b.model, lang === "en" ? "en-US" : "zh-CN");
-      });
-  }, [components, keyword, lang, sortBy, typeFilter, typeMap, warningOnly]);
+      .sort((a, b) => a.model.localeCompare(b.model, sortLocale));
+  }, [components, keyword, sortLocale, typeFilter, typeMap, warningOnly]);
 
   const warningCount = components.filter(isWarning).length;
   const isHome = entryMode === "home";
@@ -118,10 +106,6 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
           filterTitle: "Search & Filters",
           keywordPlaceholder: "Keywords: model / aux info / note / type",
           allTypes: "All Types",
-          sortUpdated: "Sort by Updated Time",
-          sortQuantity: "Sort by Quantity",
-          sortPrice: "Sort by Lowest Price",
-          sortModel: "Sort by Model",
           warningOnly: "Show low-stock only",
           summary: `Total ${filtered.length} items, ${warningCount} in low stock.`,
           unknownType: "Unknown Type",
@@ -152,10 +136,6 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
           filterTitle: "搜索与筛选",
           keywordPlaceholder: "关键词：型号/辅助信息/备注/类型",
           allTypes: "全部类型",
-          sortUpdated: "按更新时间",
-          sortQuantity: "按总数目",
-          sortPrice: "按最低价格",
-          sortModel: "按型号",
           warningOnly: "仅显示库存预警",
           summary: `当前共 ${filtered.length} 条，库存预警 ${warningCount} 条。`,
           unknownType: "未知类型",
@@ -217,17 +197,11 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
           />
           <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
             <option value="all">{text.allTypes}</option>
-            {types.map((item) => (
+            {sortedTypes.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
             ))}
-          </select>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-            <option value="updated">{text.sortUpdated}</option>
-            <option value="quantity">{text.sortQuantity}</option>
-            <option value="price">{text.sortPrice}</option>
-            <option value="model">{text.sortModel}</option>
           </select>
           <label className="checkbox-line">
             <input
@@ -241,7 +215,7 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
         <p className="muted">{text.summary}</p>
       </section>
 
-      <section className="component-list">
+      <section className="component-list scroll-list">
         {filtered.map((item) => (
           <article key={item.id} className={isWarning(item) ? "component-card warning-card" : "component-card"}>
             <header>
@@ -292,7 +266,11 @@ export default function ComponentsPage({ entryMode = "list" }: ComponentsPagePro
               </div>
               <div>
                 <span>{text.linkedPcb}</span>
-                <p>{Array.from(pcbUsageMap.get(item.id)?.pcbNames ?? []).join(lang === "en" ? ", " : "，") || "-"}</p>
+                <p>
+                  {Array.from(pcbUsageMap.get(item.id)?.pcbNames ?? [])
+                    .sort((a, b) => a.localeCompare(b, sortLocale))
+                    .join(lang === "en" ? ", " : "，") || "-"}
+                </p>
               </div>
             </div>
           </article>

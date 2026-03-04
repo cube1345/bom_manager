@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { StarRating, StarRatingInput } from "@/components/star-rating";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { StoreReview } from "@/lib/types";
 import { formatTime, requestJson } from "@/lib/http-client";
 import { useUiLang } from "@/lib/ui-language";
@@ -28,13 +27,9 @@ const initialForm: StoreForm = {
   note: "",
 };
 
-function normalizeStarValue(value: number) {
-  const clamped = Math.max(0.5, Math.min(5, value));
-  return Math.round(clamped * 2) / 2;
-}
-
 export default function StoresPage() {
   const lang = useUiLang();
+  const sortLocale = lang === "en" ? "en-US" : "zh-Hans-CN";
   const [stores, setStores] = useState<StoreReview[]>([]);
   const [form, setForm] = useState<StoreForm>(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,8 +75,6 @@ export default function StoresPage() {
           editBtn: "Edit",
           deleteBtn: "Delete",
           empty: "No store review data yet.",
-          currentScore: "Current score: ",
-          outOfFive: "/ 5",
         }
       : {
           loadError: "加载失败",
@@ -121,8 +114,6 @@ export default function StoresPage() {
           editBtn: "编辑",
           deleteBtn: "删除",
           empty: "暂无店铺评价数据。",
-          currentScore: "当前评分：",
-          outOfFive: " / 5",
         };
 
   const loadStores = useCallback(async () => {
@@ -140,6 +131,14 @@ export default function StoresPage() {
   useEffect(() => {
     void loadStores();
   }, [loadStores]);
+
+  const sortedStores = useMemo(
+    () =>
+      [...stores].sort((a, b) =>
+        `${a.platform} ${a.shopName}`.localeCompare(`${b.platform} ${b.shopName}`, sortLocale),
+      ),
+    [sortLocale, stores],
+  );
 
   async function submitStore(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -249,18 +248,17 @@ export default function StoresPage() {
                   *
                 </span>
               </div>
-              <div id="store-quality-score">
-                <StarRatingInput
-                  lang={lang}
-                  value={Number(form.qualityScore || 0)}
-                  onChange={(next) => setForm((prev) => ({ ...prev, qualityScore: String(normalizeStarValue(next)) }))}
-                />
-              </div>
-              <p className="muted">
-                {text.currentScore}
-                {normalizeStarValue(Number(form.qualityScore || 0)).toFixed(1)}
-                {text.outOfFive}
-              </p>
+              <input
+                id="store-quality-score"
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={form.qualityScore}
+                onChange={(event) => setForm((prev) => ({ ...prev, qualityScore: event.target.value }))}
+                placeholder={lang === "en" ? "e.g. 4.5" : "例如：4.5"}
+                required
+              />
             </div>
             <div className="form-field">
               <div className="field-head">
@@ -271,18 +269,17 @@ export default function StoresPage() {
                   *
                 </span>
               </div>
-              <div id="store-price-score">
-                <StarRatingInput
-                  lang={lang}
-                  value={Number(form.priceScore || 0)}
-                  onChange={(next) => setForm((prev) => ({ ...prev, priceScore: String(normalizeStarValue(next)) }))}
-                />
-              </div>
-              <p className="muted">
-                {text.currentScore}
-                {normalizeStarValue(Number(form.priceScore || 0)).toFixed(1)}
-                {text.outOfFive}
-              </p>
+              <input
+                id="store-price-score"
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={form.priceScore}
+                onChange={(event) => setForm((prev) => ({ ...prev, priceScore: event.target.value }))}
+                placeholder={lang === "en" ? "e.g. 4.2" : "例如：4.2"}
+                required
+              />
             </div>
             <div className="form-field">
               <div className="field-head">
@@ -375,18 +372,18 @@ export default function StoresPage() {
         <article className="panel">
           <h2>{text.listTitle}</h2>
           {loading ? <p className="muted">{text.loading}</p> : null}
-          <div className="type-list">
-            {stores.map((item) => (
+          <div className="type-list scroll-list">
+            {sortedStores.map((item) => (
               <div className="type-item" key={item.id}>
                 <div>
                   <strong>
                     {item.platform} / {item.shopName}
                   </strong>
                   <p>
-                    {text.qualityLine} <StarRating value={item.qualityScore} /> {item.qualityScore.toFixed(1)} / 5
+                    {text.qualityLine} {item.qualityScore.toFixed(1)} / 5
                   </p>
                   <p>
-                    {text.priceLine} <StarRating value={item.priceScore} /> {item.priceScore.toFixed(1)} / 5
+                    {text.priceLine} {item.priceScore.toFixed(1)} / 5
                   </p>
                   <p>{text.shippingLine} ¥{item.shippingFee.toFixed(2)}</p>
                   <p>{text.referenceLine} ¥{item.referencePrice.toFixed(2)}{lang === "en" ? "/unit" : "/个"}</p>

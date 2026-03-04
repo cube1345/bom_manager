@@ -7,6 +7,7 @@ import { tr, useUiLang } from "@/lib/ui-language";
 
 export default function TypesPage() {
   const lang = useUiLang();
+  const sortLocale = lang === "en" ? "en-US" : "zh-Hans-CN";
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [primaryName, setPrimaryName] = useState("");
   const [secondaryName, setSecondaryName] = useState("");
@@ -84,16 +85,12 @@ export default function TypesPage() {
     }
 
     return Array.from(groups.entries())
-      .sort(([a], [b]) => a.localeCompare(b, lang === "en" ? "en-US" : "zh-Hans-CN"))
+      .sort(([a], [b]) => a.localeCompare(b, sortLocale))
       .map(([primary, items]) => ({
         primary,
-        items: items.sort((a, b) => {
-          const aSecondary = a.secondaryName ?? "";
-          const bSecondary = b.secondaryName ?? "";
-          return aSecondary.localeCompare(bSecondary, lang === "en" ? "en-US" : "zh-Hans-CN");
-        }),
+        items: items.sort((a, b) => a.name.localeCompare(b.name, sortLocale)),
       }));
-  }, [lang, types]);
+  }, [lang, sortLocale, types]);
 
   const text =
     lang === "en"
@@ -211,7 +208,7 @@ export default function TypesPage() {
         <article className="panel">
           <h2>{text.listTitle}</h2>
           {loading ? <p className="muted">{text.loading}</p> : null}
-          <div className="type-list">
+          <div className="type-list scroll-list">
             {groupedTypes.map((group) => (
               <section className="type-group" key={group.primary}>
                 <h3>{group.primary}</h3>

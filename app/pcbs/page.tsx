@@ -29,6 +29,7 @@ const initialBomForm: PcbBomForm = { componentId: "", quantityPerBoard: "1" };
 
 export default function PcbsPage() {
   const lang = useUiLang();
+  const sortLocale = lang === "en" ? "en-US" : "zh-Hans-CN";
   const [types, setTypes] = useState<ComponentType[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
@@ -200,11 +201,12 @@ export default function PcbsPage() {
       requestJson<ProjectItem[]>("/api/projects"),
       requestJson<PcbItem[]>("/api/pcbs"),
     ]);
+    const firstProjectId = [...projectsData].sort((a, b) => a.name.localeCompare(b.name, sortLocale))[0]?.id ?? "";
     setTypes(typesData);
     setComponents(componentsData);
     setProjects(projectsData);
     setPcbs(pcbsData);
-    setPcbForm((prev) => ({ ...prev, projectId: prev.projectId || projectsData[0]?.id || "" }));
+    setPcbForm((prev) => ({ ...prev, projectId: prev.projectId || firstProjectId }));
   }
 
   useEffect(() => {
@@ -215,34 +217,41 @@ export default function PcbsPage() {
       requestJson<PcbItem[]>("/api/pcbs"),
     ])
       .then(([typesData, componentsData, projectsData, pcbsData]) => {
+        const firstProjectId = [...projectsData].sort((a, b) => a.name.localeCompare(b.name, sortLocale))[0]?.id ?? "";
         setTypes(typesData);
         setComponents(componentsData);
         setProjects(projectsData);
         setPcbs(pcbsData);
-        setPcbForm((prev) => ({ ...prev, projectId: prev.projectId || projectsData[0]?.id || "" }));
+        setPcbForm((prev) => ({ ...prev, projectId: prev.projectId || firstProjectId }));
       })
       .catch((err) => setError(err instanceof Error ? err.message : text.loadError));
-  }, [text.loadError]);
+  }, [sortLocale, text.loadError]);
 
   const typeMap = useMemo(() => new Map(types.map((item) => [item.id, item.name])), [types]);
   const componentMap = useMemo(() => new Map(components.map((item) => [item.id, item])), [components]);
   const projectMap = useMemo(() => new Map(projects.map((item) => [item.id, item])), [projects]);
+  const sortedProjects = useMemo(
+    () => [...projects].sort((a, b) => a.name.localeCompare(b.name, sortLocale)),
+    [projects, sortLocale],
+  );
+  const sortedComponents = useMemo(
+    () => [...components].sort((a, b) => a.model.localeCompare(b.model, sortLocale)),
+    [components, sortLocale],
+  );
 
   const filteredPcbs = useMemo(() => {
-    if (projectFilter === "all") {
-      return pcbs;
-    }
-    return pcbs.filter((item) => item.projectId === projectFilter);
-  }, [pcbs, projectFilter]);
+    const target = projectFilter === "all" ? pcbs : pcbs.filter((item) => item.projectId === projectFilter);
+    return [...target].sort((a, b) => `${a.name} ${a.version}`.localeCompare(`${b.name} ${b.version}`, sortLocale));
+  }, [pcbs, projectFilter, sortLocale]);
 
   const groupedByProject = useMemo(() => {
-    return projects
+    return sortedProjects
       .map((project) => ({
         project,
         pcbs: filteredPcbs.filter((pcb) => pcb.projectId === project.id),
       }))
       .filter((entry) => entry.pcbs.length || projectFilter === "all" || entry.project.id === projectFilter);
-  }, [filteredPcbs, projectFilter, projects]);
+  }, [filteredPcbs, projectFilter, sortedProjects]);
 
   const requirementSummary = useMemo(() => {
     const map = new Map<string, { componentId: string; totalRequired: number; pcbNames: Set<string> }>();
@@ -258,8 +267,12 @@ export default function PcbsPage() {
         row.pcbNames.add(label);
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.totalRequired - a.totalRequired);
-  }, [filteredPcbs, projectMap, text.unknownProject]);
+    return Array.from(map.values()).sort((a, b) => {
+      const modelA = componentMap.get(a.componentId)?.model ?? text.unknownComponent;
+      const modelB = componentMap.get(b.componentId)?.model ?? text.unknownComponent;
+      return modelA.localeCompare(modelB, sortLocale);
+    });
+  }, [componentMap, filteredPcbs, projectMap, sortLocale, text.unknownComponent, text.unknownProject]);
 
   async function submitProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -307,7 +320,7 @@ export default function PcbsPage() {
         await requestJson("/api/pcbs", { method: "POST", body: JSON.stringify(payload) });
       }
       setEditingPcbId(null);
-      setPcbForm({ ...initialPcbForm, projectId: projects[0]?.id ?? "" });
+      setPcbForm({ ...initialPcbForm, projectId: sortedProjects[0]?.id ?? "" });
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : text.savePcbError);
@@ -338,7 +351,7 @@ export default function PcbsPage() {
   function openNewBom(pcb: PcbItem) {
     setActivePcb(pcb);
     setEditingBomId(null);
-    setBomForm({ componentId: components[0]?.id ?? "", quantityPerBoard: "1" });
+    setBomForm({ componentId: sortedComponents[0]?.id ?? "", quantityPerBoard: "1" });
     setBomModalOpen(true);
   }
 
@@ -467,7 +480,7 @@ export default function PcbsPage() {
                 required
               >
                 <option value="">{text.selectProject}</option>
-                {projects.map((item) => (
+                {sortedProjects.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
@@ -545,7 +558,7 @@ export default function PcbsPage() {
               {editingPcbId ? (
                 <button type="button" className="btn-ghost" onClick={() => {
                   setEditingPcbId(null);
-                  setPcbForm({ ...initialPcbForm, projectId: projects[0]?.id ?? "" });
+                  setPcbForm({ ...initialPcbForm, projectId: sortedProjects[0]?.id ?? "" });
                 }}>
                   {text.cancel}
                 </button>
@@ -560,7 +573,7 @@ export default function PcbsPage() {
           <h2>{text.summaryTitle}</h2>
           <select value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)}>
             <option value="all">{text.allProjects}</option>
-            {projects.map((item) => (
+            {sortedProjects.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
@@ -585,7 +598,7 @@ export default function PcbsPage() {
                     <td>{component ? (typeMap.get(component.typeId) ?? text.unknownType) : text.unknownType}</td>
                     <td>{component?.model ?? text.unknownComponent}</td>
                     <td>{item.totalRequired}</td>
-                    <td>{Array.from(item.pcbNames).join(lang === "en" ? ", " : "，") || "-"}</td>
+                    <td>{Array.from(item.pcbNames).sort((a, b) => a.localeCompare(b, sortLocale)).join(lang === "en" ? ", " : "，") || "-"}</td>
                   </tr>
                 );
               })}
@@ -601,7 +614,7 @@ export default function PcbsPage() {
 
       <section className="panel">
         <h2>{text.listTitle}</h2>
-        <div className="component-list">
+        <div className="component-list scroll-list">
           {groupedByProject.map(({ project, pcbs: projectPcbs }) => (
             <article className="component-card" key={project.id}>
               <header>
@@ -679,7 +692,7 @@ export default function PcbsPage() {
                   required
                 >
                   <option value="">{text.selectComponent}</option>
-                  {components.map((item) => (
+                  {sortedComponents.map((item) => (
                     <option key={item.id} value={item.id}>
                       {typeMap.get(item.typeId) ?? text.unknownType} / {item.model}
                     </option>
@@ -718,7 +731,13 @@ export default function PcbsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activePcb.items.map((item) => {
+                    {[...activePcb.items]
+                      .sort((a, b) => {
+                        const modelA = componentMap.get(a.componentId)?.model ?? text.unknownComponent;
+                        const modelB = componentMap.get(b.componentId)?.model ?? text.unknownComponent;
+                        return modelA.localeCompare(modelB, sortLocale);
+                      })
+                      .map((item) => {
                       const component = componentMap.get(item.componentId);
                       return (
                         <tr key={item.id}>
@@ -742,7 +761,7 @@ export default function PcbsPage() {
                           </td>
                         </tr>
                       );
-                    })}
+                      })}
                     {!activePcb.items.length ? (
                       <tr>
                         <td className="muted text-center" colSpan={5}>{text.noBom}</td>
